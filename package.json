@@ -28,6 +28,7 @@
     "test": "vitest run",
     "test:e2e": "PRESS_ARGS=\"--all\" playwright test",
     "test:all": "bun run lint && bun run type-check && bun run test && bun run test:e2e",
+    "prepublishOnly": "bun run test:all && bun run build",
     "prepare": "node -e \"if ((process.env.npm_execpath || '').includes('bun')) require('child_process').spawnSync('husky', { stdio: 'inherit', shell: true })\""
   },
   "keywords": [
@@ -41,11 +42,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/ai-agent-press.git"
+    "url": "git+https://github.com/ronny1020/ai-agent-press.git"
   },
-  "homepage": "https://github.com/your-username/ai-agent-press#readme",
+  "homepage": "https://github.com/ronny1020/ai-agent-press#readme",
   "bugs": {
-    "url": "https://github.com/your-username/ai-agent-press/issues"
+    "url": "https://github.com/ronny1020/ai-agent-press/issues"
   },
   "dependencies": {
     "cac": "^7.0.0",
