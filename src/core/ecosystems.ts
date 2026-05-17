@@ -1,4 +1,4 @@
-import { basename, extname } from 'node:path'
+import path from 'node:path'
 import type { Ecosystem, NodeType } from '../shared/types'
 
 export type EcosystemConfig =
@@ -26,51 +26,73 @@ export interface EcosystemDefinition {
   globalPatterns: string[]
   detect(path: string): boolean
   detectType(path: string): NodeType | undefined
-  parse(path: string, content: string, frontmatter: Record<string, unknown>, body: string): EcosystemConfig
+  parse(
+    path: string,
+    content: string,
+    frontmatter: Record<string, unknown>,
+    body: string,
+  ): EcosystemConfig
 }
 
 export const ECOSYSTEMS: EcosystemDefinition[] = [
   createEcosystem({
     id: 'openclaw',
     label: 'OpenClaw',
-    localPatterns: ['openclaw.json', 'openclaw.json5', '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    globalPatterns: ['.openclaw/openclaw.json', '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    detect: ({ lowerPath, name }) => lowerPath.includes('.openclaw') || name === 'openclaw.json' || name === 'openclaw.json5',
+    localPatterns: [
+      'openclaw.json',
+      'openclaw.json5',
+      '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml}',
+    ],
+    globalPatterns: [
+      '.openclaw/openclaw.json',
+      '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml}',
+    ],
+    detect: ({ lowerPath, name }) =>
+      lowerPath.includes('.openclaw') ||
+      name === 'openclaw.json' ||
+      name === 'openclaw.json5',
   }),
   createEcosystem({
     id: 'openai',
     label: 'OpenAI',
     localPatterns: ['OPENAI.md', '.openai/**/*.{md,json,jsonc,json5,yml,yaml}'],
     globalPatterns: ['.openai/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    detect: ({ lowerPath, name }) => lowerPath.includes('.openai') || name === 'openai.md',
+    detect: ({ lowerPath, name }) =>
+      lowerPath.includes('.openai') || name === 'openai.md',
   }),
   createEcosystem({
     id: 'agent',
     label: 'Agent',
     localPatterns: ['AGENTS.md', '.agents/**/*.{md,json,jsonc,json5,yml,yaml}'],
     globalPatterns: ['.agents/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    detect: ({ lowerPath, name }) => lowerPath.includes('.agents') || name === 'agents.md',
+    detect: ({ lowerPath, name }) =>
+      lowerPath.includes('.agents') || name === 'agents.md',
   }),
   createEcosystem({
     id: 'codex',
     label: 'Codex',
     localPatterns: ['CODEX.md', '.codex/**/*.{md,json,jsonc,json5,yml,yaml}'],
     globalPatterns: ['.codex/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    detect: ({ lowerPath, name }) => lowerPath.includes('.codex') || name === 'codex.md',
+    detect: ({ lowerPath, name }) =>
+      lowerPath.includes('.codex') || name === 'codex.md',
   }),
   createEcosystem({
     id: 'claude',
     label: 'Claude',
     localPatterns: ['CLAUDE.md', '.claude/**/*.md'],
     globalPatterns: ['.claude/**/*.md'],
-    detect: ({ lowerPath }) => lowerPath.includes('.claude') || lowerPath.endsWith('claude.md'),
+    detect: ({ lowerPath }) =>
+      lowerPath.includes('.claude') || lowerPath.endsWith('claude.md'),
   }),
   createEcosystem({
     id: 'gemini',
     label: 'Gemini',
     localPatterns: ['GEMINI.md', '.gemini/**/*.md'],
     globalPatterns: ['.config/gemini/**/*.md'],
-    detect: ({ lowerPath }) => lowerPath.includes('.gemini') || lowerPath.includes('gemini') || lowerPath.endsWith('gemini.md'),
+    detect: ({ lowerPath }) =>
+      lowerPath.includes('.gemini') ||
+      lowerPath.includes('gemini') ||
+      lowerPath.endsWith('gemini.md'),
   }),
   createEcosystem({
     id: 'cursor',
@@ -84,31 +106,41 @@ export const ECOSYSTEMS: EcosystemDefinition[] = [
     label: 'Cline',
     localPatterns: ['.cline/**/*.md', '.clinerules', '.clinerules/**/*.md'],
     globalPatterns: ['.cline/**/*.md', '.clinerules'],
-    detect: ({ lowerPath, name }) => lowerPath.includes('.cline') || name === '.clinerules',
+    detect: ({ lowerPath, name }) =>
+      lowerPath.includes('.cline') || name === '.clinerules',
   }),
   createEcosystem({
     id: 'roo',
     label: 'Roo',
     localPatterns: ['.roo/**/*.md', '.roomodes', '.roorules', '.roorules-*'],
     globalPatterns: ['.roo/**/*.md', '.roomodes', '.roorules'],
-    detect: ({ lowerPath, name }) => lowerPath.includes('.roo') || name === '.roomodes' || name.startsWith('.roorules'),
+    detect: ({ lowerPath, name }) =>
+      lowerPath.includes('.roo') ||
+      name === '.roomodes' ||
+      name.startsWith('.roorules'),
   }),
   createEcosystem({
     id: 'aider',
     label: 'Aider',
     localPatterns: ['.aider.conf.yml', '.aider.chat.history.md'],
     globalPatterns: ['.aider.conf.yml'],
-    detect: ({ name }) => name === '.aider.conf.yml' || name === '.aider.chat.history.md',
+    detect: ({ name }) =>
+      name === '.aider.conf.yml' || name === '.aider.chat.history.md',
   }),
 ]
 
-export const ECOSYSTEM_IDS = ECOSYSTEMS.map(ecosystem => ecosystem.id)
+export const ECOSYSTEM_IDS = ECOSYSTEMS.map((ecosystem) => ecosystem.id)
 
 export function findEcosystem(path: string): EcosystemDefinition {
-  return ECOSYSTEMS.find(ecosystem => ecosystem.detect(path)) ?? fallbackEcosystem
+  return (
+    ECOSYSTEMS.find((ecosystem) => ecosystem.detect(path)) ?? fallbackEcosystem
+  )
 }
 
-export function detectNodeType(path: string, ecosystem: EcosystemDefinition): NodeType {
+export function detectNodeType(
+  path: string,
+  ecosystem: EcosystemDefinition,
+): NodeType {
   return ecosystem.detectType(path) ?? defaultNodeType(path)
 }
 
@@ -121,7 +153,7 @@ function createEcosystem(input: {
 }): EcosystemDefinition {
   return {
     ...input,
-    detect: path => input.detect(pathParts(path)),
+    detect: (path) => input.detect(pathParts(path)),
     detectType: defaultNodeType,
     parse: parseConfig,
   }
@@ -140,25 +172,37 @@ const fallbackEcosystem = createEcosystem({
   detect: () => true,
 })
 
-function pathParts(path: string): PathParts {
+function pathParts(filePath: string): PathParts {
   return {
-    lowerPath: path.toLowerCase(),
-    name: basename(path).toLowerCase(),
+    lowerPath: filePath.toLowerCase(),
+    name: path.basename(filePath).toLowerCase(),
   }
 }
 
-function defaultNodeType(path: string): NodeType {
-  const name = basename(path).toUpperCase()
-  if (name === 'GEMINI.MD' || name === 'AGENTS.MD' || name === 'CODEX.MD' || name === 'CLAUDE.MD' || name === 'OPENAI.MD') return 'instruction'
-  const lowerPath = path.toLowerCase()
+function defaultNodeType(filePath: string): NodeType {
+  const name = path.basename(filePath).toUpperCase()
+  if (
+    name === 'GEMINI.MD' ||
+    name === 'AGENTS.MD' ||
+    name === 'CODEX.MD' ||
+    name === 'CLAUDE.MD' ||
+    name === 'OPENAI.MD'
+  )
+    return 'instruction'
+  const lowerPath = filePath.toLowerCase()
   if (lowerPath.includes('rules')) return 'rule'
   if (lowerPath.includes('skills')) return 'skill'
-  if (isConfigExtension(path)) return 'workflow'
+  if (isConfigExtension(filePath)) return 'workflow'
   return 'agent'
 }
 
-function parseConfig(path: string, content: string, frontmatter: Record<string, unknown>, body: string): EcosystemConfig {
-  const extension = extname(path).toLowerCase()
+function parseConfig(
+  filePath: string,
+  content: string,
+  frontmatter: Record<string, unknown>,
+  body: string,
+): EcosystemConfig {
+  const extension = path.extname(filePath).toLowerCase()
 
   if (Object.keys(frontmatter).length > 0) {
     return {
@@ -168,7 +212,11 @@ function parseConfig(path: string, content: string, frontmatter: Record<string, 
     }
   }
 
-  if (extension === '.json' || extension === '.jsonc' || extension === '.json5') {
+  if (
+    extension === '.json' ||
+    extension === '.jsonc' ||
+    extension === '.json5'
+  ) {
     return parseJsonLike(content)
   }
 
@@ -203,7 +251,8 @@ function parseJsonLike(content: string): EcosystemConfig {
       kind: 'unparsed',
       format: 'json',
       value: content,
-      error: error instanceof Error ? error.message : 'Unknown JSON parse error',
+      error:
+        error instanceof Error ? error.message : 'Unknown JSON parse error',
     }
   }
 }
@@ -243,20 +292,22 @@ function parseScalar(value: string): unknown {
   const trimmed = value.trim()
   if (trimmed === 'true') return true
   if (trimmed === 'false') return false
-  if (trimmed === 'null') return null
+  if (trimmed === 'undefined') return undefined
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed)
-  return trimmed.replace(/^["']|["']$/g, '')
+  return trimmed.replaceAll(/^["']|["']$/g, '')
 }
 
 function stripJsonComments(content: string): string {
   return content
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '')
-    .replace(/([{,]\s*)([A-Za-z_$][\w$.-]*)(\s*:)/g, '$1"$2"$3')
-    .replace(/'([^']*)'/g, (_, value: string) => JSON.stringify(value))
-    .replace(/,\s*([}\]])/g, '$1')
+    .replaceAll(/\/\*[\s\S]*?\*\//g, '')
+    .replaceAll(/^\s*\/\/.*$/gm, '')
+    .replaceAll(/([{,]\s*)([A-Za-z_$][\w$.-]*)(\s*:)/g, '$1"$2"$3')
+    .replaceAll(/'([^']*)'/g, (_, value: string) => JSON.stringify(value))
+    .replaceAll(/,\s*([}\]])/g, '$1')
 }
 
-function isConfigExtension(path: string): boolean {
-  return ['.json', '.json5', '.jsonc', '.yml', '.yaml'].includes(extname(path).toLowerCase())
+function isConfigExtension(pathString: string): boolean {
+  return ['.json', '.json5', '.jsonc', '.yml', '.yaml'].includes(
+    path.extname(pathString).toLowerCase(),
+  )
 }

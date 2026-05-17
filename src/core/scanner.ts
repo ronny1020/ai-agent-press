@@ -1,6 +1,6 @@
+import path from 'node:path'
 import fg from 'fast-glob'
 import { readFile } from 'node:fs/promises'
-import { join, basename, extname } from 'node:path'
 import { homedir } from 'node:os'
 import matter from 'gray-matter'
 import type { ContentNode, Ecosystem } from '../shared/types'
@@ -16,8 +16,8 @@ export interface ScanOptions {
 /**
  * fast-glob requires forward slashes even on Windows.
  */
-function normalizeGlob(path: string): string {
-  return path.replace(/\\/g, '/')
+function normalizeGlob(pathName: string): string {
+  return pathName.replaceAll('\\', '/')
 }
 
 export async function scan(options: ScanOptions): Promise<ContentNode[]> {
@@ -25,36 +25,43 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
   const roots = Array.isArray(cwd) ? cwd : [cwd]
 
   const repoSearchPaths = includeRepo
-    ? roots.flatMap(root => [
-        ...ECOSYSTEMS.flatMap(ecosystem =>
-          ecosystem.localPatterns.map(pattern => normalizeGlob(join(root, pattern)))
+    ? roots.flatMap((root) => [
+        ...ECOSYSTEMS.flatMap((ecosystem) =>
+          ecosystem.localPatterns.map((pattern) =>
+            normalizeGlob(path.join(root, pattern)),
+          ),
         ),
-        normalizeGlob(join(root, '.agents/**/*.{md,json,jsonc,json5,yml,yaml}'))
+        normalizeGlob(
+          path.join(root, '.agents/**/*.{md,json,jsonc,json5,yml,yaml}'),
+        ),
       ])
     : []
 
   const home = homedir()
   const globalSearchPaths = includeGlobal
-    ? ECOSYSTEMS.flatMap(ecosystem =>
-        ecosystem.globalPatterns.map(pattern => normalizeGlob(join(home, pattern)))
+    ? ECOSYSTEMS.flatMap((ecosystem) =>
+        ecosystem.globalPatterns.map((pattern) =>
+          normalizeGlob(path.join(home, pattern)),
+        ),
       )
     : []
 
   const [repoFiles, globalFiles] = await Promise.all([
     fg(repoSearchPaths, { absolute: true, ignore: ['**/node_modules/**'] }),
-    fg(globalSearchPaths, { absolute: true, ignore: ['**/node_modules/**'] })
+    fg(globalSearchPaths, { absolute: true, ignore: ['**/node_modules/**'] }),
   ])
 
   const nodes: ContentNode[] = []
 
   const processFile = async (file: string, scope: 'repo' | 'global') => {
     try {
-      const content = await readFile(file, 'utf-8')
+      const content = await readFile(file, 'utf8')
       const { data, content: body } = matter(content)
-      const name = basename(file, extname(file))
+      const name = path.basename(file, path.extname(file))
 
       const ecosystemDefinition = findEcosystem(file)
-      if (ecosystems?.length && !ecosystems.includes(ecosystemDefinition.id)) return
+      if (ecosystems?.length && !ecosystems.includes(ecosystemDefinition.id))
+        return
 
       nodes.push({
         id: file,
@@ -74,14 +81,14 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
           },
         },
       })
-    } catch (e) {
-      console.warn(`Failed to read file: ${file}`, e)
+    } catch (error) {
+      console.warn(`Failed to read file: ${file}`, error)
     }
   }
 
   await Promise.all([
-    ...repoFiles.map(f => processFile(f, 'repo')),
-    ...globalFiles.map(f => processFile(f, 'global'))
+    ...repoFiles.map((f) => processFile(f, 'repo')),
+    ...globalFiles.map((f) => processFile(f, 'global')),
   ])
 
   return nodes

@@ -1,112 +1,159 @@
+import path from 'node:path'
 import { mkdir, writeFile, rm } from 'node:fs/promises'
-import { join, dirname, basename, extname } from 'node:path'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import type { ContentNode, Ecosystem, SidebarItem } from '../shared/types'
 import { build as vitepressBuild, createServer } from 'vitepress'
-import { buildSidebarItems, groupByEcosystem, splitNodesByScope, consolidateSidebar } from '../core/sidebar'
-
+import {
+  buildSidebarItems,
+  groupByEcosystem,
+  splitNodesByScope,
+  consolidateSidebar,
+} from '../core/sidebar'
 
 export interface RenderOptions {
   isAllMode?: boolean
   port?: number
 }
 
-export async function render(nodes: ContentNode[], outDir: string, options: RenderOptions = {}) {
-  const tempDir = await prepareTempDir(nodes, options)
+export async function render(
+  nodes: ContentNode[],
+  outDirectory: string,
+  options: RenderOptions = {},
+) {
+  const temporaryDirectory = await prepareTemporaryDirectory(nodes, options)
   console.log('Building VitePress site...')
-  await vitepressBuild(tempDir, { outDir: join(process.cwd(), outDir) })
+  await vitepressBuild(temporaryDirectory, {
+    outDir: path.join(process.cwd(), outDirectory),
+  })
 }
 
-export async function serve(nodes: ContentNode[], port: number, options: RenderOptions = {}) {
-  const tempDir = await prepareTempDir(nodes, options)
+export async function serve(
+  nodes: ContentNode[],
+  port: number,
+  options: RenderOptions = {},
+) {
+  const temporaryDirectory = await prepareTemporaryDirectory(nodes, options)
   console.log(`Starting preview server on http://localhost:${port}...`)
-  
-  const server = await createServer(tempDir, { port })
+
+  const server = await createServer(temporaryDirectory, { port })
   await server.listen()
   server.printUrls()
 }
 
-export async function prepareTempDir(nodes: ContentNode[], options: RenderOptions = {}): Promise<string> {
+export async function prepareTemporaryDirectory(
+  nodes: ContentNode[],
+  options: RenderOptions = {},
+): Promise<string> {
   const { isAllMode = false } = options
-  
+
   // "it should only have agent in current mode"
   const indexNode = pickIndexNode(nodes)
-  const activeNodes = (isAllMode 
-    ? nodes 
-    : nodes.filter(n => n.type === 'agent' || n.type === 'skill' || n.type === 'rule' || n.type === 'instruction' || n === indexNode))
-    .filter(n => {
-      const b = basename(n.path).toLowerCase()
-      // Exclude large cache/system files that break VitePress build
-      return !b.includes('cache') && !b.includes('auth.json') && !b.includes('version.json') && !b.includes('.lock')
-    })
+  const activeNodes = (
+    isAllMode
+      ? nodes
+      : nodes.filter(
+          (n) =>
+            n.type === 'agent' ||
+            n.type === 'skill' ||
+            n.type === 'rule' ||
+            n.type === 'instruction' ||
+            n === indexNode,
+        )
+  ).filter((n) => {
+    const b = path.basename(n.path).toLowerCase()
+    // Exclude large cache/system files that break VitePress build
+    return (
+      !b.includes('cache') &&
+      !b.includes('auth.json') &&
+      !b.includes('version.json') &&
+      !b.includes('.lock')
+    )
+  })
 
   const root = process.cwd()
-  const nodeModulesPath = join(root, 'node_modules')
-  
-  const baseTempDir = existsSync(nodeModulesPath) 
-    ? join(nodeModulesPath, '.ai-agent-press')
-    : join(homedir(), '.cache', 'ai-agent-press')
+  const nodeModulesPath = path.join(root, 'node_modules')
 
-  const tempDir = join(baseTempDir, 'temp')
-  
-  await rm(tempDir, { recursive: true, force: true })
-  await mkdir(tempDir, { recursive: true })
+  const baseTemporaryDirectory = existsSync(nodeModulesPath)
+    ? path.join(nodeModulesPath, '.ai-agent-press')
+    : path.join(homedir(), '.cache', 'ai-agent-press')
+
+  const temporaryDirectory = path.join(baseTemporaryDirectory, 'temp')
+
+  await rm(temporaryDirectory, { recursive: true, force: true })
+  await mkdir(temporaryDirectory, { recursive: true })
 
   const usedPageIds = new Set<string>()
   const nodeToLink = new Map<ContentNode, string>()
 
   for (const node of activeNodes) {
-    const link = node === indexNode ? '/' : `/${createPageId(node, usedPageIds)}`
+    const link =
+      node === indexNode ? '/' : `/${createPageId(node, usedPageIds)}`
     nodeToLink.set(node, link)
   }
 
   // Write files with rewritten links
   for (const node of activeNodes) {
     const link = nodeToLink.get(node)!
-    const targetPath = link === '/' ? join(tempDir, 'index.md') : join(tempDir, `${link.slice(1)}.md`)
-    
-    let content = node.content
-    
-    // Rewrite relative links: [text](./other.md) -> [text](/slug)
-    content = content.replace(/(\[.*?\]|!\[.*?\])\((.*?)\)/g, (match, prefix, url) => {
-      if (url.startsWith('http') || url.startsWith('/') || url.startsWith('#')) return match
-      
-      const absoluteUrlPath = join(dirname(node.path), url)
-      const targetNode = nodes.find(n => n.path === absoluteUrlPath)
-      
-      if (targetNode) {
-        const targetLink = nodeToLink.get(targetNode)
-        if (targetLink) {
-          return `${prefix}(${targetLink})`
-        }
-      }
-      return match
-    })
+    const targetPath =
+      link === '/'
+        ? path.join(temporaryDirectory, 'index.md')
+        : path.join(temporaryDirectory, `${link.slice(1)}.md`)
 
-    await mkdir(dirname(targetPath), { recursive: true })
-    
+    let content = node.content
+
+    // Rewrite relative links: [text](./other.md) -> [text](/slug)
+    content = content.replaceAll(
+      /(\[.*?\]|!\[.*?\])\((.*?)\)/g,
+      (match, prefix, url) => {
+        if (
+          url.startsWith('http') ||
+          url.startsWith('/') ||
+          url.startsWith('#')
+        )
+          return match
+
+        const absoluteUrlPath = path.join(path.dirname(node.path), url)
+        const targetNode = nodes.find((n) => n.path === absoluteUrlPath)
+
+        if (targetNode) {
+          const targetLink = nodeToLink.get(targetNode)
+          if (targetLink) {
+            return `${prefix}(${targetLink})`
+          }
+        }
+        return match
+      },
+    )
+
+    await mkdir(path.dirname(targetPath), { recursive: true })
+
     let finalBody = content
-    const isMarkdown = extname(node.path).toLowerCase() === '.md'
-    
+    const isMarkdown = path.extname(node.path).toLowerCase() === '.md'
+
     if (isMarkdown) {
       // Escape Vue delimiters to prevent compilation errors
-      finalBody = finalBody.replace(/{{/g, '&#123;&#123;').replace(/}}/g, '&#125;&#125;')
+      finalBody = finalBody
+        .replaceAll('{{', '&#123;&#123;')
+        .replaceAll('}}', '&#125;&#125;')
     } else {
-      const ext = extname(node.path).slice(1) || 'text'
-      finalBody = `\n\n\`\`\`${ext}\n${content}\n\`\`\`\n\n`
+      const extension = path.extname(node.path).slice(1) || 'text'
+      finalBody = `\n\n\`\`\`${extension}\n${content}\n\`\`\`\n\n`
     }
 
     // Only wrap in v-pre if it's likely to have Vue-breaking content
     const wrapVPre = !isMarkdown || content.includes('<')
-    
+
     if (wrapVPre) {
       // Try to preserve H1 by putting it outside v-pre if possible
       const h1Match = finalBody.match(/^#\s+(.*)$/m)
       if (h1Match) {
         const title = h1Match[0]
         const rest = finalBody.slice(h1Match.index! + title.length)
-        await writeFile(targetPath, `${title}\n\n<div v-pre>\n\n${rest}\n\n</div>\n`)
+        await writeFile(
+          targetPath,
+          `${title}\n\n<div v-pre>\n\n${rest}\n\n</div>\n`,
+        )
       } else {
         await writeFile(targetPath, `<div v-pre>\n\n${finalBody}\n\n</div>\n`)
       }
@@ -117,24 +164,38 @@ export async function prepareTempDir(nodes: ContentNode[], options: RenderOption
 
   const { repoNodes, globalNodes } = splitNodesByScope(activeNodes)
 
-  const repoSidebarItems = buildSidebarItems(repoNodes, 'repo', n => nodeToLink.get(n)!, (ecosystem, scope) => `/${scope}/${slugify(ecosystem)}`)
-  const globalSidebarItems = buildSidebarItems(globalNodes, 'global', n => nodeToLink.get(n)!, (ecosystem, scope) => `/${scope}/${slugify(ecosystem)}`)
+  const repoSidebarItems = buildSidebarItems(
+    repoNodes,
+    'repo',
+    (n) => nodeToLink.get(n)!,
+    (ecosystem, scope) => `/${scope}/${slugify(ecosystem)}`,
+  )
+  const globalSidebarItems = buildSidebarItems(
+    globalNodes,
+    'global',
+    (n) => nodeToLink.get(n)!,
+    (ecosystem, scope) => `/${scope}/${slugify(ecosystem)}`,
+  )
 
   // Create ecosystem review pages
   for (const [ecosystem, groupNodes] of groupByEcosystem(repoNodes)) {
     const pageId = `repo/${slugify(ecosystem)}`
-    const targetPath = join(tempDir, `${pageId}.md`)
-    await mkdir(dirname(targetPath), { recursive: true })
+    const targetPath = path.join(temporaryDirectory, `${pageId}.md`)
+    await mkdir(path.dirname(targetPath), { recursive: true })
     await writeFile(targetPath, renderEcosystemPage(ecosystem, groupNodes))
   }
   for (const [ecosystem, groupNodes] of groupByEcosystem(globalNodes)) {
     const pageId = `global/${slugify(ecosystem)}`
-    const targetPath = join(tempDir, `${pageId}.md`)
-    await mkdir(dirname(targetPath), { recursive: true })
+    const targetPath = path.join(temporaryDirectory, `${pageId}.md`)
+    await mkdir(path.dirname(targetPath), { recursive: true })
     await writeFile(targetPath, renderEcosystemPage(ecosystem, groupNodes))
   }
 
-  const sidebar = consolidateSidebar(repoSidebarItems, globalSidebarItems, isAllMode)
+  const sidebar = consolidateSidebar(
+    repoSidebarItems,
+    globalSidebarItems,
+    isAllMode,
+  )
   const shouldSplit = isAllMode || globalSidebarItems.length > 0
 
   const findFirstLink = (items: SidebarItem[]): string | undefined => {
@@ -149,12 +210,24 @@ export async function prepareTempDir(nodes: ContentNode[], options: RenderOption
   }
 
   // Build top nav
-  const nav = shouldSplit 
+  const nav = shouldSplit
     ? [
-        ...(globalSidebarItems.length ? [{ text: 'Global', link: findFirstLink(globalSidebarItems) || '/' }] : []),
-        ...(repoSidebarItems.length ? [{ text: 'Current Repo', link: findFirstLink(repoSidebarItems) || '/' }] : [])
+        ...(globalSidebarItems.length > 0
+          ? [{ text: 'Global', link: findFirstLink(globalSidebarItems) || '/' }]
+          : []),
+        ...(repoSidebarItems.length > 0
+          ? [
+              {
+                text: 'Current Repo',
+                link: findFirstLink(repoSidebarItems) || '/',
+              },
+            ]
+          : []),
       ]
-    : repoSidebarItems.map(item => ({ text: item.text, link: item.link || findFirstLink(item.items || []) || '/' }))
+    : repoSidebarItems.map((item) => ({
+        text: item.text,
+        link: item.link || findFirstLink(item.items || []) || '/',
+      }))
 
   // Generate config
   const vitepressConfig = {
@@ -166,7 +239,14 @@ export async function prepareTempDir(nodes: ContentNode[], options: RenderOption
       lineNumbers: true,
     },
     head: [
-      ['link', { rel: 'icon', type: 'image/svg+xml', href: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚀</text></svg>' }],
+      [
+        'link',
+        {
+          rel: 'icon',
+          type: 'image/svg+xml',
+          href: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚀</text></svg>',
+        },
+      ],
     ],
     themeConfig: {
       siteTitle: 'AI Agent Portal',
@@ -178,7 +258,8 @@ export async function prepareTempDir(nodes: ContentNode[], options: RenderOption
       outline: { level: [2, 3], label: 'On this page' },
       returnToTopLabel: 'Back to top',
       footer: {
-        message: 'Generated by <a href="https://github.com/nicepkg/ai-agent-press">ai-agent-press</a>',
+        message:
+          'Generated by <a href="https://github.com/nicepkg/ai-agent-press">ai-agent-press</a>',
         copyright: 'MIT Licensed',
       },
       lastUpdatedText: 'Last updated',
@@ -191,36 +272,42 @@ export async function prepareTempDir(nodes: ContentNode[], options: RenderOption
 
   const config = `import { defineConfig } from 'vitepress'
 
-export default defineConfig(${JSON.stringify(vitepressConfig, null, 2)})
+export default defineConfig(${JSON.stringify(vitepressConfig, undefined, 2)})
 `
-  const configDir = join(tempDir, '.vitepress')
-  await mkdir(configDir, { recursive: true })
-  await writeFile(join(configDir, 'config.ts'), config)
+  const configDirectory = path.join(temporaryDirectory, '.vitepress')
+  await mkdir(configDirectory, { recursive: true })
+  await writeFile(path.join(configDirectory, 'config.ts'), config)
 
-  return tempDir
+  return temporaryDirectory
 }
 
 function pickIndexNode(nodes: ContentNode[]): ContentNode | undefined {
   return (
-    nodes.find(node => basename(node.path).toUpperCase() === 'GEMINI.MD') ??
-    nodes.find(node => basename(node.path).toUpperCase() === 'AGENTS.MD') ??
+    nodes.find(
+      (node) => path.basename(node.path).toUpperCase() === 'GEMINI.MD',
+    ) ??
+    nodes.find(
+      (node) => path.basename(node.path).toUpperCase() === 'AGENTS.MD',
+    ) ??
     nodes[0]
   )
 }
 
 function createPageId(node: ContentNode, usedPageIds: Set<string>): string {
-  const stem = basename(node.path, extname(node.path))
+  const stem = path.basename(node.path, path.extname(node.path))
   // Hierarchical structure: {scope}/{ecosystem}/{category}/{name}
   // Mapping internal types to URL category names
   const categoryMap: Record<string, string> = {
-    'agent': 'agents',
-    'skill': 'skills',
-    'rule': 'skills',
-    'instruction': 'instructions',
-    'workflow': 'resources'
+    agent: 'agents',
+    skill: 'skills',
+    rule: 'skills',
+    instruction: 'instructions',
+    workflow: 'resources',
   }
   const category = categoryMap[node.type] || node.type
-  const parts = [node.scope, node.ecosystem, category, stem].map(p => p || 'unknown').map(slugify)
+  const parts = [node.scope, node.ecosystem, category, stem]
+    .map((p) => p || 'unknown')
+    .map((p) => slugify(p))
   const prefix = parts.join('/')
   let pageId = prefix
   let suffix = 2
@@ -235,16 +322,21 @@ function createPageId(node: ContentNode, usedPageIds: Set<string>): string {
 }
 
 function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'page'
+  return (
+    value
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, '-')
+      .replaceAll(/^-+|-+$/g, '') || 'page'
+  )
 }
 
-function renderEcosystemPage(ecosystem: Ecosystem, nodes: ContentNode[]): string {
-  const sections = nodes.map(node => {
+function renderEcosystemPage(
+  ecosystem: Ecosystem,
+  nodes: ContentNode[],
+): string {
+  const sections = nodes.map((node) => {
     const parsed = getParsedConfig(node)
-    const settings = parsed ? JSON.stringify(parsed, null, 2) : '{}'
+    const settings = parsed ? JSON.stringify(parsed, undefined, 2) : '{}'
 
     return [
       `## ${node.title}`,
@@ -277,5 +369,5 @@ function getParsedConfig(node: ContentNode): unknown {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
+  return typeof value === 'object' && value !== undefined
 }

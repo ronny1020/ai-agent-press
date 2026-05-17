@@ -55,10 +55,14 @@ Welcome to the AI Agent Press portal for this repository.
 
 ## Development Standards
 
+### Configuration Files
+- **Standalone Configs**: Prefer standalone configuration files (e.g., `.eslintrc.json`, `.lintstagedrc.json`, `tsconfig.json`) instead of embedding configurations inside `package.json`. This keeps the project structure clean and manageable.
+
 ### Commit Style
 - **Conventional Commits**: All contributions must use the `feat(xxx):`, `fix(xxx):` etc. format.
 
 ### AI Agent Protocols
 - **Source Control**: DO NOT stage or commit changes unless explicitly requested by the user.
+- **Git Tags**: DO NOT create, push, or maintain git tags. This is strictly prohibited.
 - **PR Readiness**: Agents must read `.github/PULL_REQUEST_TEMPLATE.md` before initiating PR tasks.
 - **Rules**: Refer to `GEMINI.md` for internal agent mandates.

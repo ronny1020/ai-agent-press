@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'bun:test'
-import { ECOSYSTEM_IDS, ECOSYSTEMS } from './ecosystems'
+import { ECOSYSTEMS, ECOSYSTEM_IDS } from './ecosystems'
 import type { Ecosystem } from '../shared/types'
 
 describe('Ecosystem registry', () => {
+  const MIN_PATTERNS = 0
+
   it('should register every supported ecosystem once', () => {
     const expected: Ecosystem[] = [
       'openai',
@@ -23,8 +25,8 @@ describe('Ecosystem registry', () => {
 
   it('should define discovery patterns for each ecosystem', () => {
     for (const ecosystem of ECOSYSTEMS) {
-      expect(ecosystem.localPatterns.length).toBeGreaterThan(0)
-      expect(ecosystem.globalPatterns.length).toBeGreaterThan(0)
+      expect(ecosystem.localPatterns.length).toBeGreaterThan(MIN_PATTERNS)
+      expect(ecosystem.globalPatterns.length).toBeGreaterThan(MIN_PATTERNS)
     }
   })
 })

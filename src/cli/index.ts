@@ -6,7 +6,11 @@ import { scan } from '../core/scanner'
 import { ECOSYSTEM_IDS } from '../core/ecosystems'
 import { render, serve } from '../renderer/vitepress'
 import type { Ecosystem, SidebarItem } from '../shared/types'
-import { buildSidebarItems, splitNodesByScope, consolidateSidebar } from '../core/sidebar'
+import {
+  buildSidebarItems,
+  splitNodesByScope,
+  consolidateSidebar,
+} from '../core/sidebar'
 
 const cli = cac('press')
 
@@ -31,7 +35,7 @@ type CliOptions = {
   global?: boolean
   repo?: boolean
   port?: string | number
-  outDir?: string
+  outDirectoryectory?: string
   openai?: boolean
   claude?: boolean
   gemini?: boolean
@@ -49,13 +53,13 @@ type CliOptions = {
 const ecosystemFlags: Ecosystem[] = ECOSYSTEM_IDS
 
 function resolveScanRoots(paths: string[] = []): string[] {
-  return paths.length ? paths : [process.cwd()]
+  return paths.length > 0 ? paths : [process.cwd()]
 }
 
 function selectedEcosystems(options: CliOptions): Ecosystem[] | undefined {
   if (options.all) return undefined
-  const ecosystems = ecosystemFlags.filter(ecosystem => options[ecosystem])
-  return ecosystems.length ? ecosystems : undefined
+  const ecosystems = ecosystemFlags.filter((ecosystem) => options[ecosystem])
+  return ecosystems.length > 0 ? ecosystems : undefined
 }
 
 function resolvePort(options: CliOptions): number {
@@ -79,7 +83,7 @@ async function previewAction(paths: string[], options: CliOptions) {
     console.error('Scanning for AI content...')
     const nodes = await scanFromCli(paths, options)
     console.error(`Found ${nodes.length} nodes.`)
-    
+
     await serve(nodes, resolvePort(options), { isAllMode: !!options.all })
   } catch (error) {
     console.error('Preview server failed:', error)
@@ -92,44 +96,56 @@ cli
   .action(previewAction)
 
 cli
-  .command('preview [...paths]', 'Start local documentation server (Live Preview)')
+  .command(
+    'preview [...paths]',
+    'Start local documentation server (Live Preview)',
+  )
   .action(previewAction)
 
 cli
   .command('build [paths...]', 'Generate static documentation site')
-  .option('--outDir <dir>', 'Output directory', { default: '.press/dist' })
+  .option('--outDirectory <dir>', 'Output directory', {
+    default: '.press/dist',
+  })
   .action(async (paths: string[], options: CliOptions) => {
     try {
       console.error('Scanning for AI content...')
       const nodes = await scanFromCli(paths, options)
       console.error(`Found ${nodes.length} nodes.`)
-      
-      const outDir = options.outDir ?? '.press/dist'
-      await render(nodes, outDir, { isAllMode: !!options.all })
-      console.error(`Success! Site built to ${outDir}`)
+
+      const outDirectoryectory = options.outDirectoryectory ?? '.press/dist'
+      await render(nodes, outDirectoryectory, { isAllMode: !!options.all })
+      console.error(`Success! Site built to ${outDirectoryectory}`)
     } catch (error) {
       console.error('Build failed:', error)
       process.exit(1)
     }
   })
-
 cli
   .command('list', 'List all discovered agent files (Headless mode)')
   .action(async (options: CliOptions) => {
     const nodes = await scanFromCli([], options)
-    
+
     const { repoNodes, globalNodes } = splitNodesByScope(nodes)
 
-    const repoSidebar = buildSidebarItems(repoNodes, 'repo', n => n.path)
-    const globalSidebar = buildSidebarItems(globalNodes, 'global', n => n.path)
-    
-    const sidebar = consolidateSidebar(repoSidebar, globalSidebar, !!options.all)
+    const repoSidebar = buildSidebarItems(repoNodes, 'repo', (n) => n.path)
+    const globalSidebar = buildSidebarItems(
+      globalNodes,
+      'global',
+      (n) => n.path,
+    )
+
+    const sidebar = consolidateSidebar(
+      repoSidebar,
+      globalSidebar,
+      !!options.all,
+    )
 
     if (options.json) {
-      console.log(JSON.stringify(sidebar, null, 2))
+      console.log(JSON.stringify(sidebar, undefined, 2))
     } else {
       console.log('\nDiscovered AI Agent Files:\n')
-      
+
       const printSidebar = (items: SidebarItem[], indent: string = '') => {
         for (const item of items) {
           if (item.link) {
@@ -144,8 +160,10 @@ cli
       }
 
       printSidebar(sidebar)
-      
-      console.log(`\nTotal: ${nodes.length} nodes found (${repoNodes.length} repo, ${globalNodes.length} global).\n`)
+
+      console.log(
+        `\nTotal: ${nodes.length} nodes found (${repoNodes.length} repo, ${globalNodes.length} global).\n`,
+      )
     }
   })
 
@@ -154,8 +172,8 @@ cli
   .action(async (options: CliOptions) => {
     console.log('Validating...')
     const nodes = await scanFromCli([], options)
-    const errors = nodes.filter(n => !n.content.trim())
-    
+    const errors = nodes.filter((n) => !n.content.trim())
+
     if (errors.length > 0) {
       console.error(`Validation failed: ${errors.length} empty files found.`)
       process.exit(1)
@@ -163,11 +181,9 @@ cli
     console.log('Validation successful.')
   })
 
-cli
-  .command('doctor', 'Diagnostics and environment checks')
-  .action(() => {
-    console.log('Running diagnostics...')
-  })
+cli.command('doctor', 'Diagnostics and environment checks').action(() => {
+  console.log('Running diagnostics...')
+})
 
 cli.help()
 cli.version(version)
