@@ -18,11 +18,13 @@ Turn your AI-agent instruction files and config directories into a unified devel
 ## 🚀 Quick Start
 
 ### Installation
+
 ```bash
-bun add -g ai-agent-press
+npm add -g ai-agent-press@latest
 ```
 
 ### Usage
+
 ```bash
 # Start a documentation portal (default preview mode)
 press
@@ -54,6 +56,7 @@ press list --all --json
 - `press doctor`: Diagnostics and environment checks.
 
 ### Global Options
+
 - `--global`: Include only global configurations from `~/.agents`, `~/.claude`, etc.
 - `--repo`: Include only configurations from the current repository.
 - `-p, --port <port>`: Choose the preview server port.
@@ -65,7 +68,9 @@ press list --all --json
 ## 🖥 Architecture & Display
 
 ### Hierarchical Sidebar & URLs
+
 The portal and headless output follow a strict hierarchy:
+
 1.  **Scope**: `Global` or `Current Repo` (omitted if only one exists).
 2.  **Ecosystem**: `gemini`, `claude`, etc. (omitted if only one exists).
 3.  **Category**: `instructions`, `agents`, `skills`, or `resources`.
@@ -74,11 +79,14 @@ The portal and headless output follow a strict hierarchy:
 **URL Example**: `/global/gemini/skills/github-pr`
 
 ### Smart Flattening
+
 To keep navigation clean, **ai-agent-press** automatically flattens layers:
+
 - If only local repo files are found, the top-level "Current Repo" section is hidden.
 - If only one ecosystem is active (e.g., via `--gemini`), the ecosystem layer is omitted.
 
 ### Ecosystem Discovery
+
 - **OpenAI**: `OPENAI.md`, `.openai/`
 - **Agent**: `AGENTS.md`, `.agents/`
 - **Codex**: `CODEX.md`, `.codex/`
@@ -90,6 +98,7 @@ To keep navigation clean, **ai-agent-press** automatically flattens layers:
 - **OpenClaw**: `openclaw.json`, `openclaw.json5`, `.openclaw/`
 
 ### Rendering Notes
+
 - `GEMINI.md` is the preferred portal homepage; `AGENTS.md` is the fallback.
 - Content is automatically wrapped in `<div v-pre>` to prevent VitePress from parsing agent instructions as Vue components.
 - Problematic system files (e.g., `models_cache.json`) are automatically excluded from rendering to ensure build stability.

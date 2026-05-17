@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PRESS_ARGS = process.env.PRESS_ARGS ?? ''
-const TIMEOUT_MS = 15000
+const TIMEOUT_MS = 15_000
 const RETRIES_CI = 2
 const RETRIES_LOCAL = 0
 const WORKERS_CI = 1
@@ -29,7 +29,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stderr: 'pipe',
     stdout: 'pipe',
-    timeout: 180000,
+    timeout: 180_000,
     url: 'http://localhost:5173',
   },
   workers: process.env.CI ? WORKERS_CI : undefined,
