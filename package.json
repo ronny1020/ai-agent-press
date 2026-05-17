@@ -35,12 +35,14 @@
   },
   "keywords": [
     "ai",
-    "agents",
+    "ai-agents",
     "documentation",
     "vitepress",
-    "cli"
+    "cli",
+    "developer-tools",
+    "automation"
   ],
-  "author": "",
+  "author": "Ronny <1020ronny@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
