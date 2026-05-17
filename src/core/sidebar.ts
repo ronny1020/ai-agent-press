@@ -24,16 +24,11 @@ export function buildSidebarItems(
   nodes: ContentNode[],
   scope: string,
   getLink: (node: ContentNode) => string,
-  getEcosystemLink?: (ecosystem: Ecosystem, scope: string) => string,
 ) {
   const ecosystemGroups = groupByEcosystem(nodes)
   const sidebarItems: SidebarItem[] = []
 
   for (const [ecosystem, groupNodes] of ecosystemGroups) {
-    const ecosystemLink = getEcosystemLink
-      ? getEcosystemLink(ecosystem, scope)
-      : undefined
-
     const instructions = groupNodes.filter((n) => n.type === 'instruction')
     const skills = groupNodes.filter(
       (n) => n.type === 'skill' || n.type === 'rule',
@@ -69,7 +64,6 @@ export function buildSidebarItems(
 
     sidebarItems.push({
       text: ecosystem,
-      link: ecosystemLink,
       items: categories.length > 0 ? categories : undefined,
     })
   }

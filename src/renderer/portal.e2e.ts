@@ -9,28 +9,6 @@ test('portal loads and shows content', async ({ page }) => {
   ).toBeVisible()
 })
 
-test('portal shows ecosystem review pages for current repo', async ({
-  page,
-}) => {
-  await page.goto('/repo/gemini')
-  await page.waitForSelector('.vp-doc h1')
-  await expect(
-    page.getByRole('heading', { name: 'gemini Settings' }),
-  ).toBeVisible()
-  await expect(
-    page.locator('code').filter({ hasText: 'GEMINI.md' }).first(),
-  ).toBeVisible()
-
-  await page.goto('/repo/agent')
-  await page.waitForSelector('.vp-doc h1')
-  await expect(
-    page.getByRole('heading', { name: 'agent Settings' }),
-  ).toBeVisible()
-  await expect(
-    page.locator('code').filter({ hasText: 'AGENTS.md' }).first(),
-  ).toBeVisible()
-})
-
 test('all sidebar links are valid', async ({ page }) => {
   await page.goto('/')
   // Wait for sidebar to be visible

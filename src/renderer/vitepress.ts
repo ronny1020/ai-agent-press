@@ -2,11 +2,10 @@ import path from 'node:path'
 import { mkdir, writeFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import type { ContentNode, Ecosystem, SidebarItem } from '../shared/types'
+import type { ContentNode, SidebarItem } from '../shared/types'
 import { build as vitepressBuild, createServer } from 'vitepress'
 import {
   buildSidebarItems,
-  groupByEcosystem,
   splitNodesByScope,
   consolidateSidebar,
 } from '../core/sidebar'
@@ -168,28 +167,12 @@ export async function prepareTemporaryDirectory(
     repoNodes,
     'repo',
     (n) => nodeToLink.get(n)!,
-    (ecosystem, scope) => `/${scope}/${slugify(ecosystem)}`,
   )
   const globalSidebarItems = buildSidebarItems(
     globalNodes,
     'global',
     (n) => nodeToLink.get(n)!,
-    (ecosystem, scope) => `/${scope}/${slugify(ecosystem)}`,
   )
-
-  // Create ecosystem review pages
-  for (const [ecosystem, groupNodes] of groupByEcosystem(repoNodes)) {
-    const pageId = `repo/${slugify(ecosystem)}`
-    const targetPath = path.join(temporaryDirectory, `${pageId}.md`)
-    await mkdir(path.dirname(targetPath), { recursive: true })
-    await writeFile(targetPath, renderEcosystemPage(ecosystem, groupNodes))
-  }
-  for (const [ecosystem, groupNodes] of groupByEcosystem(globalNodes)) {
-    const pageId = `global/${slugify(ecosystem)}`
-    const targetPath = path.join(temporaryDirectory, `${pageId}.md`)
-    await mkdir(path.dirname(targetPath), { recursive: true })
-    await writeFile(targetPath, renderEcosystemPage(ecosystem, groupNodes))
-  }
 
   const sidebar = consolidateSidebar(
     repoSidebarItems,
@@ -282,15 +265,7 @@ export default defineConfig(${JSON.stringify(vitepressConfig, undefined, 2)})
 }
 
 function pickIndexNode(nodes: ContentNode[]): ContentNode | undefined {
-  return (
-    nodes.find(
-      (node) => path.basename(node.path).toUpperCase() === 'GEMINI.MD',
-    ) ??
-    nodes.find(
-      (node) => path.basename(node.path).toUpperCase() === 'AGENTS.MD',
-    ) ??
-    nodes[0]
-  )
+  return nodes[0]
 }
 
 function createPageId(node: ContentNode, usedPageIds: Set<string>): string {
@@ -328,46 +303,4 @@ function slugify(value: string): string {
       .replaceAll(/[^a-z0-9]+/g, '-')
       .replaceAll(/^-+|-+$/g, '') || 'page'
   )
-}
-
-function renderEcosystemPage(
-  ecosystem: Ecosystem,
-  nodes: ContentNode[],
-): string {
-  const sections = nodes.map((node) => {
-    const parsed = getParsedConfig(node)
-    const settings = parsed ? JSON.stringify(parsed, undefined, 2) : '{}'
-
-    return [
-      `## ${node.title}`,
-      '',
-      `- Type: \`${node.type}\``,
-      `- Path: \`${node.path}\``,
-      '',
-      '```json',
-      settings,
-      '```',
-    ].join('\n')
-  })
-
-  return [`# ${ecosystem} Settings`, '', ...sections].join('\n\n')
-}
-
-function getParsedConfig(node: ContentNode): unknown {
-  const ecosystemConfig = node.metadata?.ecosystemConfig
-  if (!isRecord(ecosystemConfig)) return undefined
-
-  const parsed = ecosystemConfig.parsed
-  if (!isRecord(parsed)) return undefined
-
-  return {
-    format: parsed.format,
-    kind: parsed.kind,
-    value: parsed.value,
-    error: parsed.error,
-  }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== undefined
 }

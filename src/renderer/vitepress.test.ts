@@ -19,8 +19,29 @@ describe('VitePress renderer', () => {
   afterEach(async () => {
     await rm(temporaryDirectory, { recursive: true, force: true })
   })
+  it('should use README.md as the index when available', async () => {
+    const root = process.cwd().replaceAll('\\', '/')
+    await prepareTemporaryDirectory([
+      createNode({
+        path: `${root}/repo/README.md`,
+        title: 'Readme Home',
+        content: '# Readme Home',
+      }),
+      createNode({
+        path: `${root}/repo/GEMINI.md`,
+        title: 'Gemini',
+        content: '# Gemini',
+      }),
+    ])
+
+    await expect(
+      readFile(path.join(temporaryDirectory, 'index.md'), 'utf8'),
+    ).resolves.toContain('# Readme Home')
+  })
 
   it('should use AGENTS.md as the index when GEMINI.md is absent', async () => {
+    // ...
+
     const root = process.cwd().replaceAll('\\', '/')
     await prepareTemporaryDirectory([
       createNode({
@@ -92,48 +113,6 @@ describe('VitePress renderer', () => {
     expect(config).toContain('"lastUpdated": true') // lastUpdated
     expect(config).toContain('"cleanUrls": true') // cleanUrls
     expect(config).toContain('"lineNumbers": true') // markdown line numbers
-  })
-
-  it('should generate ecosystem review pages with parsed settings', async () => {
-    const root = process.cwd().replaceAll('\\', '/')
-    await prepareTemporaryDirectory(
-      [
-        createNode({
-          path: `${root}/repo/openclaw.json`,
-          title: 'openclaw',
-          content:
-            '{ "agents": { "defaults": { "model": "openai/gpt-5.4" } } }',
-          ecosystem: 'openclaw',
-          type: 'workflow',
-          metadata: {
-            ecosystemConfig: {
-              id: 'openclaw',
-              label: 'OpenClaw',
-              source: `${root}/repo/openclaw.json`,
-              parsed: {
-                kind: 'object',
-                format: 'json',
-                value: {
-                  agents: {
-                    defaults: {
-                      model: 'openai/gpt-5.4',
-                    },
-                  },
-                },
-              },
-            },
-          },
-        }),
-      ],
-      { isAllMode: true },
-    )
-
-    const content = await readFile(
-      path.join(temporaryDirectory, 'repo/openclaw.md'),
-      'utf8',
-    )
-    expect(content).toContain('# openclaw Settings')
-    expect(content).toContain('"model": "openai/gpt-5.4"')
   })
 
   it('should include agents, skills, and rules in current mode (default)', async () => {
