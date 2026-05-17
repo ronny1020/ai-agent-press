@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { ECOSYSTEM_IDS, ECOSYSTEMS } from './ecosystems'
 import type { Ecosystem } from '../shared/types'
 
@@ -9,6 +9,7 @@ describe('Ecosystem registry', () => {
       'claude',
       'gemini',
       'cursor',
+      'agent',
       'codex',
       'cline',
       'roo',

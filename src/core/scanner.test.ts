@@ -1,8 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { scan } from './scanner'
 import { writeFile, mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+
+mock.module('node:os', () => {
+  const os = require('node:os')
+  return {
+    ...os,
+    homedir: () => join(os.tmpdir(), 'mock-home'),
+  }
+})
 
 describe('Scanner', () => {
   const testDir = join(tmpdir(), 'ai-agent-press-test')
@@ -20,7 +28,7 @@ describe('Scanner', () => {
     const content = '---\ntitle: My Gemini\n---\n# Content'
     await writeFile(join(testDir, 'GEMINI.md'), content)
 
-    const nodes = await scan({ cwd: testDir })
+    const nodes = await scan({ cwd: testDir, includeGlobal: false })
     
     expect(nodes).toHaveLength(1)
     const node = nodes[0]
@@ -35,7 +43,7 @@ describe('Scanner', () => {
     await mkdir(agentsDir)
     await writeFile(join(agentsDir, 'my-skill.md'), '# My Skill')
 
-    const nodes = await scan({ cwd: testDir })
+    const nodes = await scan({ cwd: testDir, includeGlobal: false })
     
     expect(nodes).toHaveLength(1)
     const node = nodes[0]
@@ -47,20 +55,23 @@ describe('Scanner', () => {
 
   it('should detect core markdown ecosystems correctly', async () => {
     await writeFile(join(testDir, 'OPENAI.md'), '# OpenAI')
-    await writeFile(join(testDir, 'AGENTS.md'), '# Codex')
+    await writeFile(join(testDir, 'AGENTS.md'), '# Agent')
+    await writeFile(join(testDir, 'CODEX.md'), '# Codex')
     await writeFile(join(testDir, 'CLAUDE.md'), '# Claude')
     const cursorDir = join(testDir, '.cursor', 'rules')
     await mkdir(cursorDir, { recursive: true })
     await writeFile(join(cursorDir, 'rule1.md'), '# Rule 1')
 
-    const nodes = await scan({ cwd: testDir })
+    const nodes = await scan({ cwd: testDir, includeGlobal: false })
     
     const openaiNode = nodes.find(n => n.ecosystem === 'openai')
+    const agentNode = nodes.find(n => n.ecosystem === 'agent')
     const codexNode = nodes.find(n => n.ecosystem === 'codex')
     const claudeNode = nodes.find(n => n.ecosystem === 'claude')
     const cursorNode = nodes.find(n => n.ecosystem === 'cursor')
 
     expect(openaiNode).toBeDefined()
+    expect(agentNode).toBeDefined()
     expect(codexNode).toBeDefined()
     expect(claudeNode).toBeDefined()
     expect(cursorNode).toBeDefined()
@@ -69,7 +80,8 @@ describe('Scanner', () => {
   it('should detect all configured ecosystem conventions', async () => {
     await writeFile(join(testDir, 'OPENAI.md'), '# OpenAI')
     await writeFile(join(testDir, 'GEMINI.md'), '# Gemini')
-    await writeFile(join(testDir, 'AGENTS.md'), '# Codex')
+    await writeFile(join(testDir, 'AGENTS.md'), '# Agent')
+    await writeFile(join(testDir, 'CODEX.md'), '# Codex')
     await writeFile(join(testDir, 'CLAUDE.md'), '# Claude')
     await writeFile(join(testDir, 'openclaw.json'), '{ "agents": {} }')
 
@@ -83,11 +95,11 @@ describe('Scanner', () => {
     await writeFile(join(clineDir, 'rule.md'), '# Cline')
     await writeFile(join(rooDir, 'rule.md'), '# Roo')
 
-    const nodes = await scan({ cwd: testDir })
+    const nodes = await scan({ cwd: testDir, includeGlobal: false })
     const ecosystems = new Set(nodes.map(node => node.ecosystem))
 
     expect(ecosystems).toEqual(
-      new Set(['openai', 'gemini', 'codex', 'claude', 'cursor', 'cline', 'roo', 'openclaw'])
+      new Set(['openai', 'gemini', 'agent', 'codex', 'claude', 'cursor', 'cline', 'roo', 'openclaw'])
     )
   })
 
@@ -99,7 +111,7 @@ describe('Scanner', () => {
     await writeFile(join(firstRoot, 'GEMINI.md'), '# Gemini')
     await writeFile(join(secondRoot, 'CLAUDE.md'), '# Claude')
 
-    const nodes = await scan({ cwd: [firstRoot, secondRoot] })
+    const nodes = await scan({ cwd: [firstRoot, secondRoot], includeGlobal: false })
 
     expect(nodes).toHaveLength(2)
     expect(nodes.map(node => node.ecosystem).sort()).toEqual(['claude', 'gemini'])
@@ -113,6 +125,38 @@ describe('Scanner', () => {
 
     expect(nodes).toHaveLength(1)
     expect(nodes[0]?.ecosystem).toBe('claude')
+  })
+
+  it('should respect includeGlobal and includeRepo options', async () => {
+    // Setup repo file
+    await writeFile(join(testDir, 'GEMINI.md'), '# Repo')
+
+    // Setup global file (mocked home)
+    const home = join(tmpdir(), 'mock-home')
+    const globalAgentsDir = join(home, '.agents')
+    await mkdir(globalAgentsDir, { recursive: true })
+    await writeFile(join(globalAgentsDir, 'global.md'), '# Global')
+
+    // Test default (both)
+    const allNodes = await scan({ cwd: testDir })
+    expect(allNodes.some(n => n.scope === 'repo')).toBe(true)
+    expect(allNodes.some(n => n.scope === 'global')).toBe(true)
+
+    // Test only repo
+    const repoNodes = await scan({ cwd: testDir, includeGlobal: false })
+    expect(repoNodes.every(n => n.scope === 'repo')).toBe(true)
+    expect(repoNodes.some(n => n.scope === 'repo')).toBe(true)
+    expect(repoNodes.some(n => n.scope === 'global')).toBe(false)
+
+    // Test only global
+    const globalNodes = await scan({ cwd: testDir, includeRepo: false })
+    expect(globalNodes.every(n => n.scope === 'global')).toBe(true)
+    expect(globalNodes.some(n => n.scope === 'global')).toBe(true)
+    expect(globalNodes.some(n => n.scope === 'repo')).toBe(false)
+
+    // Test none
+    const noNodes = await scan({ cwd: testDir, includeGlobal: false, includeRepo: false })
+    expect(noNodes).toHaveLength(0)
   })
 
   it('should attach parsed ecosystem config metadata', async () => {

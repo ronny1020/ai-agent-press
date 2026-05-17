@@ -9,6 +9,7 @@ import { ECOSYSTEMS, detectNodeType, findEcosystem } from './ecosystems'
 export interface ScanOptions {
   cwd: string | string[]
   includeGlobal?: boolean
+  includeRepo?: boolean
   ecosystems?: Ecosystem[]
 }
 
@@ -20,47 +21,49 @@ function normalizeGlob(path: string): string {
 }
 
 export async function scan(options: ScanOptions): Promise<ContentNode[]> {
-  const { cwd, includeGlobal, ecosystems } = options
+  const { cwd, ecosystems, includeGlobal = true, includeRepo = true } = options
   const roots = Array.isArray(cwd) ? cwd : [cwd]
 
-  const searchPaths = roots.flatMap(root => [
-    ...ECOSYSTEMS.flatMap(ecosystem =>
-      ecosystem.localPatterns.map(pattern => normalizeGlob(join(root, pattern)))
-    ),
-    normalizeGlob(join(root, '.agents/**/*.{md,json,jsonc,json5,yml,yaml}'))
-  ])
+  const repoSearchPaths = includeRepo
+    ? roots.flatMap(root => [
+        ...ECOSYSTEMS.flatMap(ecosystem =>
+          ecosystem.localPatterns.map(pattern => normalizeGlob(join(root, pattern)))
+        ),
+        normalizeGlob(join(root, '.agents/**/*.{md,json,jsonc,json5,yml,yaml}'))
+      ])
+    : []
 
-  if (includeGlobal) {
-    const home = homedir()
-    searchPaths.push(
-      ...ECOSYSTEMS.flatMap(ecosystem =>
+  const home = homedir()
+  const globalSearchPaths = includeGlobal
+    ? ECOSYSTEMS.flatMap(ecosystem =>
         ecosystem.globalPatterns.map(pattern => normalizeGlob(join(home, pattern)))
       )
-    )
-  }
+    : []
 
-  const files = await fg(searchPaths, { 
-    absolute: true,
-    ignore: ['**/node_modules/**']
-  })
+  const [repoFiles, globalFiles] = await Promise.all([
+    fg(repoSearchPaths, { absolute: true, ignore: ['**/node_modules/**'] }),
+    fg(globalSearchPaths, { absolute: true, ignore: ['**/node_modules/**'] })
+  ])
+
   const nodes: ContentNode[] = []
 
-  for (const file of files) {
+  const processFile = async (file: string, scope: 'repo' | 'global') => {
     try {
       const content = await readFile(file, 'utf-8')
       const { data, content: body } = matter(content)
       const name = basename(file, extname(file))
 
       const ecosystemDefinition = findEcosystem(file)
-      if (ecosystems?.length && !ecosystems.includes(ecosystemDefinition.id)) continue
+      if (ecosystems?.length && !ecosystems.includes(ecosystemDefinition.id)) return
 
       nodes.push({
         id: file,
+        ecosystem: ecosystemDefinition.id,
+        type: detectNodeType(file, ecosystemDefinition),
+        scope,
         title: data.title || name,
         path: file,
         content: body,
-        ecosystem: ecosystemDefinition.id,
-        type: detectNodeType(file, ecosystemDefinition),
         metadata: {
           ...data,
           ecosystemConfig: {
@@ -75,6 +78,11 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
       console.warn(`Failed to read file: ${file}`, e)
     }
   }
+
+  await Promise.all([
+    ...repoFiles.map(f => processFile(f, 'repo')),
+    ...globalFiles.map(f => processFile(f, 'global'))
+  ])
 
   return nodes
 }

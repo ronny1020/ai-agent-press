@@ -3,6 +3,7 @@ export type Ecosystem =
   | 'claude'
   | 'gemini'
   | 'cursor'
+  | 'agent'
   | 'codex'
   | 'cline'
   | 'roo'
@@ -21,10 +22,17 @@ export interface ContentNode {
   id: string
   ecosystem: Ecosystem
   type: NodeType
+  scope?: 'repo' | 'global'
   title: string
   path: string
   content: string
   references?: string[]
   tags?: string[]
   metadata?: Record<string, unknown>
+}
+export interface SidebarItem {
+  text?: string
+  link?: string
+  items?: SidebarItem[]
+  collapsed?: boolean
 }

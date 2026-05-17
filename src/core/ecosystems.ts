@@ -45,11 +45,18 @@ export const ECOSYSTEMS: EcosystemDefinition[] = [
     detect: ({ lowerPath, name }) => lowerPath.includes('.openai') || name === 'openai.md',
   }),
   createEcosystem({
+    id: 'agent',
+    label: 'Agent',
+    localPatterns: ['AGENTS.md', '.agents/**/*.{md,json,jsonc,json5,yml,yaml}'],
+    globalPatterns: ['.agents/**/*.{md,json,jsonc,json5,yml,yaml}'],
+    detect: ({ lowerPath, name }) => lowerPath.includes('.agents') || name === 'agents.md',
+  }),
+  createEcosystem({
     id: 'codex',
     label: 'Codex',
-    localPatterns: ['AGENTS.md', '.codex/**/*.{md,json,jsonc,json5,yml,yaml}'],
+    localPatterns: ['CODEX.md', '.codex/**/*.{md,json,jsonc,json5,yml,yaml}'],
     globalPatterns: ['.codex/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    detect: ({ lowerPath, name }) => lowerPath.includes('.codex') || name === 'agents.md',
+    detect: ({ lowerPath, name }) => lowerPath.includes('.codex') || name === 'codex.md',
   }),
   createEcosystem({
     id: 'claude',
@@ -142,7 +149,7 @@ function pathParts(path: string): PathParts {
 
 function defaultNodeType(path: string): NodeType {
   const name = basename(path).toUpperCase()
-  if (name === 'GEMINI.MD' || name === 'AGENTS.MD' || name === 'CLAUDE.MD' || name === 'OPENAI.MD') return 'instruction'
+  if (name === 'GEMINI.MD' || name === 'AGENTS.MD' || name === 'CODEX.MD' || name === 'CLAUDE.MD' || name === 'OPENAI.MD') return 'instruction'
   const lowerPath = path.toLowerCase()
   if (lowerPath.includes('rules')) return 'rule'
   if (lowerPath.includes('skills')) return 'skill'

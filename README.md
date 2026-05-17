@@ -1,36 +1,31 @@
 # ai-agent-press 🚀
 
-**ai-agent-press** is a zero-config CLI tool that transforms AI agent ecosystem files into searchable documentation portals and structured content graphs.
+**ai-agent-press** is a zero-config, **Bun-powered** CLI tool that transforms AI agent ecosystem files into searchable documentation portals and structured content graphs.
 
-Turn your AI-agent instruction files and config directories into a unified developer portal or a headless JSON stream in seconds.
+Turn your AI-agent instruction files and config directories into a unified developer portal or a hierarchical JSON stream in seconds.
 
 ## ✨ Features
 
 - **Filesystem-first**: Scans your repo for AI-agent-related files automatically.
+- **Bun-powered**: Native speed and built-in testing with `bun test`.
+- **Hierarchical Navigation**: Strictly organized sidebar and URLs (`/{scope}/{ecosystem}/{category}/{name}`).
+- **Smart Flattening**: Automatically simplifies the sidebar structure when only one scope or ecosystem is present.
+- **Headless Mode**: List agent configurations as a hierarchical JSON tree that matches the portal sidebar.
 - **Zero-config**: No manual VitePress scaffolding or repo pollution.
-- **Ephemeral**: Generates documentation in `node_modules` or global cache.
-- **Headless Mode**: List and stream agent configurations as JSON for CI/CD integration.
-- **Ecosystem-aware**: Supports OpenAI, Claude, Gemini, Cursor, Codex, Cline, Roo, and OpenClaw.
-- **Scoped scans**: Target one or more directories and filter by ecosystem.
-- **Settings review**: Parses config files into per-ecosystem settings objects in JSON output and portal review pages.
-- **Graph-oriented**: Normalizes all content into a shared internal model.
+- **Ecosystem-aware**: Supports OpenAI, Claude, Gemini, Cursor, Agent, Codex, Cline, Roo, and OpenClaw.
+- **Global-first**: Simultaneously loads local repo and global (`~/.agents`, etc.) instructions by default.
 
 ## 🚀 Quick Start
 
-### Global Installation
+### Installation
 ```bash
-npm install -g ai-agent-press
-# or
 bun add -g ai-agent-press
 ```
 
 ### Usage
 ```bash
-# Start a hot-reloading documentation portal (default preview mode)
+# Start a documentation portal (default preview mode)
 press
-
-# Equivalent named preview command
-press preview
 
 # Preview a specific project or multiple roots
 press ../my-project -p 3000
@@ -39,18 +34,13 @@ press preview ./repo-a ./repo-b --port 5000
 # Build a static documentation site (output to .press/dist)
 press build
 press build ./repo-a --outDir .press/repo-a
-bun run press:build
 
-# Headless: List all discovered agents
-press list
-
-# Headless: Output agent graph as JSON
+# Headless: List all discovered agents as a hierarchical JSON tree
 press list --json
 
 # Filter to one or more ecosystems
 press list --claude --json
 press preview --gemini --cursor
-press list --openclaw --json
 press list --all --json
 ```
 
@@ -59,26 +49,39 @@ press list --all --json
 - `press`: Start local documentation server in preview mode.
 - `press preview`: Start local documentation server.
 - `press build`: Generate static documentation site.
-- `press list`: List all discovered agent files (Headless mode).
+- `press list`: List agent files in a hierarchical structure (Headless mode).
 - `press validate`: Validate ecosystem structures and content.
 - `press doctor`: Diagnostics and environment checks.
 
 ### Global Options
-- `--global`: Include global configurations from `~/.agents`, `~/.claude`, etc.
-- `-p, --port <port>`: Choose the preview server port for `press` or `preview`.
-- `--json`: Format output as JSON (for `list` and `validate`).
-- `--openai`, `--claude`, `--gemini`, `--cursor`, `--codex`, `--cline`, `--roo`, `--openclaw`: Include only matching ecosystems. Flags can be combined.
-- `--all`: Include all ecosystems explicitly. This is also the default when no ecosystem filter is provided.
+- `--global`: Include only global configurations from `~/.agents`, `~/.claude`, etc.
+- `--repo`: Include only configurations from the current repository.
+- `-p, --port <port>`: Choose the preview server port.
+- `--json`: Format output as JSON (for `list`).
+- `--openai`, `--claude`, `--gemini`, `--cursor`, `--codex`, `--cline`, `--roo`, `--openclaw`: Filter ecosystems.
+- `--all`: Include all ecosystems and categories (Skills, Rules, Workflows).
 - `-h, --help`: Display help information.
 
-## 🖥 Display Modes
+## 🖥 Architecture & Display
 
-- **Current Mode** (Default): Focuses strictly on **Agents**. When scanning the current directory or specific ecosystems, skills and auxiliary resources are hidden for a streamlined experience.
-- **All Mode** (`--all`): Includes all discovered nodes (Agents, Skills, Rules, Workflows). The portal reorganizes the sidebar into a hierarchical "Ecosystems" structure.
+### Hierarchical Sidebar & URLs
+The portal and headless output follow a strict hierarchy:
+1.  **Scope**: `Global` or `Current Repo` (omitted if only one exists).
+2.  **Ecosystem**: `gemini`, `claude`, etc. (omitted if only one exists).
+3.  **Category**: `instructions`, `agents`, `skills`, or `resources`.
+4.  **Name**: The slugified filename.
+
+**URL Example**: `/global/gemini/skills/github-pr`
+
+### Smart Flattening
+To keep navigation clean, **ai-agent-press** automatically flattens layers:
+- If only local repo files are found, the top-level "Current Repo" section is hidden.
+- If only one ecosystem is active (e.g., via `--gemini`), the ecosystem layer is omitted.
 
 ### Ecosystem Discovery
 - **OpenAI**: `OPENAI.md`, `.openai/`
-- **Codex**: `AGENTS.md`, `.codex/`
+- **Agent**: `AGENTS.md`, `.agents/`
+- **Codex**: `CODEX.md`, `.codex/`
 - **Claude**: `CLAUDE.md`, `.claude/`
 - **Gemini**: `GEMINI.md`, `.gemini/`
 - **Cursor**: `.cursor/rules/`
@@ -87,21 +90,17 @@ press list --all --json
 - **OpenClaw**: `openclaw.json`, `openclaw.json5`, `.openclaw/`
 
 ### Rendering Notes
-- `GEMINI.md` is used as the portal homepage when present.
-- `AGENTS.md` becomes the homepage fallback when `GEMINI.md` is absent.
-- Pages with the same filename in different directories are given unique generated routes to avoid collisions.
-- The portal includes one ecosystem review page per detected ecosystem, with parsed settings from JSON, YAML, and Markdown frontmatter.
-- **Nested Sidebar**: In "All Mode", Skills and Resources are nested under their respective Ecosystems. In "Current Mode", agents are displayed at the top level for quick access.
+- `GEMINI.md` is the preferred portal homepage; `AGENTS.md` is the fallback.
+- Content is automatically wrapped in `<div v-pre>` to prevent VitePress from parsing agent instructions as Vue components.
+- Problematic system files (e.g., `models_cache.json`) are automatically excluded from rendering to ensure build stability.
 
 ## 📂 Project Philosophy
 
-**ai-agent-press** aims to unify fragmented AI ecosystems into a single, searchable experience without requiring repository structure changes.
-
-**No Repo Pollution**: All temporary files are stored in `node_modules/.ai-agent-press` or your system's global cache, keeping your project root clean.
+**ai-agent-press** aims to unify fragmented AI ecosystems into a single, searchable experience without repo pollution. All temporary files are stored in `node_modules/.ai-agent-press`, keeping your project clean.
 
 ## 🤝 Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) and [TESTING.md](TESTING.md) for details.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) and [TESTING.md](TESTING.md) for details. **Note**: This project uses `bun` for all development and testing.
 
 ## 📄 License
 

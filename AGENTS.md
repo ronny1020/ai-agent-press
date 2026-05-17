@@ -15,13 +15,15 @@ Welcome to the AI Agent Press portal for this repository.
 - [x] Google Gemini
 - [x] Anthropic Claude
 - [x] Cursor Rules
-- [x] Custom `.agents/` definitions
-- [x] OpenAI, Codex, Cline, Roo, and OpenClaw filter flags
+- [x] Custom `.agents/` and `AGENTS.md` (Agent)
+- [x] Custom `.codex/` and `CODEX.md` (Codex)
+- [x] OpenAI, Claude, Gemini, Cursor, Cline, Roo, and OpenClaw filter flags
 
 ## Ecosystem Discovery
 
 - **OpenAI**: `OPENAI.md`, `.openai/`
-- **Codex**: `AGENTS.md`, `.codex/`
+- **Agent**: `AGENTS.md`, `.agents/`
+- **Codex**: `CODEX.md`, `.codex/`
 - **Claude**: `CLAUDE.md`, `.claude/`
 - **Gemini**: `GEMINI.md`, `.gemini/`
 - **Cursor**: `.cursor/rules/`
@@ -29,14 +31,25 @@ Welcome to the AI Agent Press portal for this repository.
 - **Roo**: `.roo/`, `.roomodes`, `.roorules`
 - **OpenClaw**: `openclaw.json`, `openclaw.json5`, `.openclaw/`
 
+
 ## Current CLI Behavior
 
 - `press` starts preview mode by default.
 - `press preview [paths...]` starts the local documentation server for the current working directory or the provided paths.
 - `press build [paths...]` generates a static VitePress site and supports `--outDir`.
+- `press list` (Headless mode) emits a hierarchical JSON structure identical to the portal sidebar.
 - `press list --json` emits the normalized content graph, including parsed `metadata.ecosystemConfig` settings objects.
-- `press list --all --json` explicitly includes all supported ecosystems.
-- Ecosystem flags such as `--gemini`, `--claude`, `--cursor`, and `--openclaw` filter scan results and can be combined.
+- `press list --all --json` explicitly includes all supported ecosystems and scope/ecosystem layers.
+- **Scope Filtering**: 
+  - `press --global`: Shows only global configurations.
+  - `press --repo`: Shows only repository configurations.
+  - `press` (no flags): Shows both.
+- Ecosystem flags such as `--gemini`, `--claude`, `--cursor`, and `--openclaw` filter scan results and can be combined with scope flags.
+- **Hierarchical Sidebar**: Content is organized as Sections (Global/Repo) -> Ecosystems -> Categories (Instructions, Agents, Skills, Resources).
+- **Flattening Logic**: 
+  - The "Global/Repo" layer is omitted if only one scope is active.
+  - The "Ecosystem" layer is omitted if only one ecosystem is active.
+- **Hierarchical URLs**: Pages follow the `/{scope}/{ecosystem}/{category}/{name}` pattern.
 - `GEMINI.md` is the preferred portal homepage; `AGENTS.md` is used as the fallback homepage when `GEMINI.md` is absent.
 - Preview/build output includes per-ecosystem review pages that group discovered files and parsed settings.
 

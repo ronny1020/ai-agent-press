@@ -5,16 +5,19 @@ import { version } from '../../package.json'
 import { scan } from '../core/scanner'
 import { ECOSYSTEM_IDS } from '../core/ecosystems'
 import { render, serve } from '../renderer/vitepress'
-import type { Ecosystem } from '../shared/types'
+import type { Ecosystem, SidebarItem } from '../shared/types'
+import { buildSidebarItems, splitNodesByScope, consolidateSidebar } from '../core/sidebar'
 
 const cli = cac('press')
 
 // Global options
 cli.option('--global', 'Include global agent configurations (~/.agents, etc.)')
+cli.option('--repo', 'Include current repository configurations')
 cli.option('--openai', 'Include OpenAI ecosystem')
 cli.option('--claude', 'Include Claude ecosystem')
 cli.option('--gemini', 'Include Gemini ecosystem')
 cli.option('--cursor', 'Include Cursor ecosystem')
+cli.option('--agent', 'Include Agent ecosystem')
 cli.option('--codex', 'Include Codex ecosystem')
 cli.option('--cline', 'Include Cline ecosystem')
 cli.option('--roo', 'Include Roo ecosystem')
@@ -26,12 +29,14 @@ cli.option('--json', 'Output in JSON format')
 
 type CliOptions = {
   global?: boolean
+  repo?: boolean
   port?: string | number
   outDir?: string
   openai?: boolean
   claude?: boolean
   gemini?: boolean
   cursor?: boolean
+  agent?: boolean
   codex?: boolean
   cline?: boolean
   roo?: boolean
@@ -58,18 +63,22 @@ function resolvePort(options: CliOptions): number {
 }
 
 async function scanFromCli(paths: string[] = [], options: CliOptions) {
+  const includeGlobal = options.global ?? !options.repo
+  const includeRepo = options.repo ?? !options.global
+
   return scan({
     cwd: resolveScanRoots(paths),
-    includeGlobal: options.global,
+    includeGlobal,
+    includeRepo,
     ecosystems: selectedEcosystems(options),
   })
 }
 
 async function previewAction(paths: string[], options: CliOptions) {
   try {
-    console.log('Scanning for AI content...')
+    console.error('Scanning for AI content...')
     const nodes = await scanFromCli(paths, options)
-    console.log(`Found ${nodes.length} nodes.`)
+    console.error(`Found ${nodes.length} nodes.`)
     
     await serve(nodes, resolvePort(options), { isAllMode: !!options.all })
   } catch (error) {
@@ -91,13 +100,13 @@ cli
   .option('--outDir <dir>', 'Output directory', { default: '.press/dist' })
   .action(async (paths: string[], options: CliOptions) => {
     try {
-      console.log('Scanning for AI content...')
+      console.error('Scanning for AI content...')
       const nodes = await scanFromCli(paths, options)
-      console.log(`Found ${nodes.length} nodes.`)
+      console.error(`Found ${nodes.length} nodes.`)
       
       const outDir = options.outDir ?? '.press/dist'
       await render(nodes, outDir, { isAllMode: !!options.all })
-      console.log(`Success! Site built to ${outDir}`)
+      console.error(`Success! Site built to ${outDir}`)
     } catch (error) {
       console.error('Build failed:', error)
       process.exit(1)
@@ -109,15 +118,34 @@ cli
   .action(async (options: CliOptions) => {
     const nodes = await scanFromCli([], options)
     
+    const { repoNodes, globalNodes } = splitNodesByScope(nodes)
+
+    const repoSidebar = buildSidebarItems(repoNodes, 'repo', n => n.path)
+    const globalSidebar = buildSidebarItems(globalNodes, 'global', n => n.path)
+    
+    const sidebar = consolidateSidebar(repoSidebar, globalSidebar, !!options.all)
+
     if (options.json) {
-      console.log(JSON.stringify(nodes, null, 2))
+      console.log(JSON.stringify(sidebar, null, 2))
     } else {
       console.log('\nDiscovered AI Agent Files:\n')
-      nodes.forEach(node => {
-        console.log(`- [${node.ecosystem}] ${node.title} (${node.type})`)
-        console.log(`  Path: ${node.path}\n`)
-      })
-      console.log(`Total: ${nodes.length} nodes found.\n`)
+      
+      const printSidebar = (items: SidebarItem[], indent: string = '') => {
+        for (const item of items) {
+          if (item.link) {
+            console.log(`${indent}- ${item.text} (${item.link})`)
+          } else {
+            console.log(`${indent}- ${item.text}`)
+          }
+          if (item.items) {
+            printSidebar(item.items, indent + '  ')
+          }
+        }
+      }
+
+      printSidebar(sidebar)
+      
+      console.log(`\nTotal: ${nodes.length} nodes found (${repoNodes.length} repo, ${globalNodes.length} global).\n`)
     }
   })
 

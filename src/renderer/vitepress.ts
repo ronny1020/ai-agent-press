@@ -2,8 +2,9 @@ import { mkdir, writeFile, rm } from 'node:fs/promises'
 import { join, dirname, basename, extname } from 'node:path'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import type { ContentNode, Ecosystem } from '../shared/types'
+import type { ContentNode, Ecosystem, SidebarItem } from '../shared/types'
 import { build as vitepressBuild, createServer } from 'vitepress'
+import { buildSidebarItems, groupByEcosystem, splitNodesByScope, consolidateSidebar } from '../core/sidebar'
 
 
 export interface RenderOptions {
@@ -31,9 +32,14 @@ export async function prepareTempDir(nodes: ContentNode[], options: RenderOption
   
   // "it should only have agent in current mode"
   const indexNode = pickIndexNode(nodes)
-  const activeNodes = isAllMode 
+  const activeNodes = (isAllMode 
     ? nodes 
-    : nodes.filter(n => n.type === 'agent' || n.type === 'skill' || n.type === 'rule' || n === indexNode)
+    : nodes.filter(n => n.type === 'agent' || n.type === 'skill' || n.type === 'rule' || n.type === 'instruction' || n === indexNode))
+    .filter(n => {
+      const b = basename(n.path).toLowerCase()
+      // Exclude large cache/system files that break VitePress build
+      return !b.includes('cache') && !b.includes('auth.json') && !b.includes('version.json') && !b.includes('.lock')
+    })
 
   const root = process.cwd()
   const nodeModulesPath = join(root, 'node_modules')
@@ -79,63 +85,76 @@ export async function prepareTempDir(nodes: ContentNode[], options: RenderOption
     })
 
     await mkdir(dirname(targetPath), { recursive: true })
-    await writeFile(targetPath, content)
-  }
-
-  const ecosystemGroups = groupByEcosystem(activeNodes)
-  const ecosystemSidebarItems: any[] = []
-
-  for (const [ecosystem, groupNodes] of ecosystemGroups) {
-    const pageId = `ecosystem-${slugify(ecosystem)}`
-    const targetPath = join(tempDir, `${pageId}.md`)
-    await writeFile(targetPath, renderEcosystemPage(ecosystem, groupNodes))
     
-    const ecosystemLink = `/${pageId}`
+    let finalBody = content
+    const isMarkdown = extname(node.path).toLowerCase() === '.md'
     
-    const skills = groupNodes.filter(n => n.type === 'skill' || n.type === 'rule' || n.path.includes('rules'))
-    const agents = groupNodes.filter(n => n.type === 'agent' && n !== indexNode)
-    const resources = groupNodes.filter(n => !skills.includes(n) && !agents.includes(n) && n !== indexNode)
-
-    const items: any[] = []
-    if (agents.length) {
-      items.push({ text: 'Agents', items: agents.map(n => ({ text: n.title, link: nodeToLink.get(n) })) })
-    }
-    if (skills.length) {
-      items.push({ text: 'Skills', items: skills.map(n => ({ text: n.title, link: nodeToLink.get(n) })) })
-    }
-    if (resources.length) {
-      items.push({ text: 'Resources', items: resources.map(n => ({ text: n.title, link: nodeToLink.get(n) })) })
+    if (isMarkdown) {
+      // Escape Vue delimiters to prevent compilation errors
+      finalBody = finalBody.replace(/{{/g, '&#123;&#123;').replace(/}}/g, '&#125;&#125;')
+    } else {
+      const ext = extname(node.path).slice(1) || 'text'
+      finalBody = `\n\n\`\`\`${ext}\n${content}\n\`\`\`\n\n`
     }
 
-    ecosystemSidebarItems.push({
-      text: ecosystem,
-      link: ecosystemLink,
-      items: items.length ? items : undefined
-    })
-  }
-
-  let sidebar: any[] = []
-
-  if (isAllMode) {
-    // "ecosytems only show with all mode"
-    sidebar = [
-      {
-        text: 'Ecosystems',
-        items: ecosystemSidebarItems
+    // Only wrap in v-pre if it's likely to have Vue-breaking content
+    const wrapVPre = !isMarkdown || content.includes('<')
+    
+    if (wrapVPre) {
+      // Try to preserve H1 by putting it outside v-pre if possible
+      const h1Match = finalBody.match(/^#\s+(.*)$/m)
+      if (h1Match) {
+        const title = h1Match[0]
+        const rest = finalBody.slice(h1Match.index! + title.length)
+        await writeFile(targetPath, `${title}\n\n<div v-pre>\n\n${rest}\n\n</div>\n`)
+      } else {
+        await writeFile(targetPath, `<div v-pre>\n\n${finalBody}\n\n</div>\n`)
       }
-    ]
-  } else {
-    // Current mode: flat list of agents or grouped by ecosystem but no "Ecosystems" top level
-    sidebar = ecosystemSidebarItems.map(item => ({
-      text: item.text,
-      items: item.items?.flatMap((sub: any) => sub.items) || []
-    }))
+    } else {
+      await writeFile(targetPath, finalBody)
+    }
+  }
+
+  const { repoNodes, globalNodes } = splitNodesByScope(activeNodes)
+
+  const repoSidebarItems = buildSidebarItems(repoNodes, 'repo', n => nodeToLink.get(n)!, (ecosystem, scope) => `/${scope}/${slugify(ecosystem)}`)
+  const globalSidebarItems = buildSidebarItems(globalNodes, 'global', n => nodeToLink.get(n)!, (ecosystem, scope) => `/${scope}/${slugify(ecosystem)}`)
+
+  // Create ecosystem review pages
+  for (const [ecosystem, groupNodes] of groupByEcosystem(repoNodes)) {
+    const pageId = `repo/${slugify(ecosystem)}`
+    const targetPath = join(tempDir, `${pageId}.md`)
+    await mkdir(dirname(targetPath), { recursive: true })
+    await writeFile(targetPath, renderEcosystemPage(ecosystem, groupNodes))
+  }
+  for (const [ecosystem, groupNodes] of groupByEcosystem(globalNodes)) {
+    const pageId = `global/${slugify(ecosystem)}`
+    const targetPath = join(tempDir, `${pageId}.md`)
+    await mkdir(dirname(targetPath), { recursive: true })
+    await writeFile(targetPath, renderEcosystemPage(ecosystem, groupNodes))
+  }
+
+  const sidebar = consolidateSidebar(repoSidebarItems, globalSidebarItems, isAllMode)
+  const shouldSplit = isAllMode || globalSidebarItems.length > 0
+
+  const findFirstLink = (items: SidebarItem[]): string | undefined => {
+    for (const item of items) {
+      if (item.link) return item.link
+      if (item.items) {
+        const nested = findFirstLink(item.items)
+        if (nested) return nested
+      }
+    }
+    return undefined
   }
 
   // Build top nav
-  const nav = isAllMode 
-    ? (ecosystemSidebarItems[0] ? [{ text: 'Ecosystems', link: ecosystemSidebarItems[0].link }] : [])
-    : ecosystemSidebarItems.map(item => ({ text: item.text, link: item.link }))
+  const nav = shouldSplit 
+    ? [
+        ...(globalSidebarItems.length ? [{ text: 'Global', link: findFirstLink(globalSidebarItems) || '/' }] : []),
+        ...(repoSidebarItems.length ? [{ text: 'Current Repo', link: findFirstLink(repoSidebarItems) || '/' }] : [])
+      ]
+    : repoSidebarItems.map(item => ({ text: item.text, link: item.link || findFirstLink(item.items || []) || '/' }))
 
   // Generate config
   const vitepressConfig = {
@@ -191,7 +210,18 @@ function pickIndexNode(nodes: ContentNode[]): ContentNode | undefined {
 
 function createPageId(node: ContentNode, usedPageIds: Set<string>): string {
   const stem = basename(node.path, extname(node.path))
-  const prefix = [node.ecosystem, node.type, stem].map(slugify).join('-')
+  // Hierarchical structure: {scope}/{ecosystem}/{category}/{name}
+  // Mapping internal types to URL category names
+  const categoryMap: Record<string, string> = {
+    'agent': 'agents',
+    'skill': 'skills',
+    'rule': 'skills',
+    'instruction': 'instructions',
+    'workflow': 'resources'
+  }
+  const category = categoryMap[node.type] || node.type
+  const parts = [node.scope, node.ecosystem, category, stem].map(p => p || 'unknown').map(slugify)
+  const prefix = parts.join('/')
   let pageId = prefix
   let suffix = 2
 
@@ -209,18 +239,6 @@ function slugify(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'page'
-}
-
-function groupByEcosystem(nodes: ContentNode[]): Map<Ecosystem, ContentNode[]> {
-  const groups = new Map<Ecosystem, ContentNode[]>()
-
-  for (const node of nodes) {
-    const existing = groups.get(node.ecosystem) ?? []
-    existing.push(node)
-    groups.set(node.ecosystem, existing)
-  }
-
-  return groups
 }
 
 function renderEcosystemPage(ecosystem: Ecosystem, nodes: ContentNode[]): string {
