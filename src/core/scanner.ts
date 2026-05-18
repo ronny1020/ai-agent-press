@@ -32,7 +32,7 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
           ),
         ),
         normalizeGlob(
-          path.join(root, '.agents/**/*.{md,json,jsonc,json5,yml,yaml}'),
+          path.join(root, '.agents/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}'),
         ),
       ])
     : []
@@ -55,10 +55,14 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
 
   const processFile = async (file: string, scope: 'repo' | 'global') => {
     try {
-      const content = await readFile(file, 'utf8')
-      const { data, content: body } = matter(content)
-      const name = path.basename(file, path.extname(file))
+      const rawContent = await readFile(file, 'utf8')
+      const isMarkdown = path.extname(file).toLowerCase() === '.md'
 
+      const { data, content: body } = isMarkdown
+        ? matter(rawContent)
+        : { data: {}, content: rawContent }
+
+      const name = path.basename(file, path.extname(file))
       const ecosystemDefinition = findEcosystem(file)
       if (ecosystems?.length && !ecosystems.includes(ecosystemDefinition.id))
         return
@@ -68,7 +72,7 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
         ecosystem: ecosystemDefinition.id,
         type: detectNodeType(file, ecosystemDefinition),
         scope,
-        title: data.title || name,
+        title: ((data as Record<string, unknown>).title as string) || name,
         path: file,
         content: body,
         metadata: {
@@ -77,7 +81,7 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
             id: ecosystemDefinition.id,
             label: ecosystemDefinition.label,
             source: file,
-            parsed: ecosystemDefinition.parse(file, content, data, body),
+            parsed: ecosystemDefinition.parse(file, rawContent, data, body),
           },
         },
       })

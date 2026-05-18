@@ -38,28 +38,20 @@ export function buildSidebarItems(
 
     const categories: SidebarItem[] = []
     if (instructions.length > 0) {
-      categories.push({
-        text: 'Instructions',
-        items: instructions.map((n) => ({ text: n.title, link: getLink(n) })),
-      })
+      categories.push(
+        buildHierarchicalCategory(instructions, 'Instructions', getLink),
+      )
     }
     if (agents.length > 0) {
-      categories.push({
-        text: 'Agents',
-        items: agents.map((n) => ({ text: n.title, link: getLink(n) })),
-      })
+      categories.push(buildHierarchicalCategory(agents, 'Agents', getLink))
     }
     if (skills.length > 0) {
-      categories.push({
-        text: 'Skills',
-        items: skills.map((n) => ({ text: n.title, link: getLink(n) })),
-      })
+      categories.push(buildHierarchicalCategory(skills, 'Skills', getLink))
     }
     if (resources.length > 0) {
-      categories.push({
-        text: 'Resources',
-        items: resources.map((n) => ({ text: n.title, link: getLink(n) })),
-      })
+      categories.push(
+        buildHierarchicalCategory(resources, 'Resources', getLink),
+      )
     }
 
     sidebarItems.push({
@@ -74,6 +66,54 @@ export function buildSidebarItems(
   }
 
   return sidebarItems
+}
+
+function buildHierarchicalCategory(
+  nodes: ContentNode[],
+  categoryName: string,
+  getLink: (node: ContentNode) => string,
+): SidebarItem {
+  const rootItems: SidebarItem[] = []
+  const categoryMap: Record<string, string> = {
+    agent: 'agents',
+    skill: 'skills',
+    rule: 'skills',
+    instruction: 'instructions',
+    workflow: 'resources',
+  }
+
+  for (const node of nodes) {
+    const categoryFolderName = categoryMap[node.type] || node.type
+    const normalizedPath = node.path.replaceAll('\\', '/')
+    const searchString = `/${categoryFolderName}/`
+    const lastIndex = normalizedPath.lastIndexOf(searchString)
+
+    const relativeParts: string[] = []
+    if (lastIndex !== -1) {
+      const afterCategory = normalizedPath.slice(lastIndex + searchString.length)
+      const segments = afterCategory.split('/')
+      if (segments.length > 1) {
+        relativeParts.push(...segments.slice(0, -1))
+      }
+    }
+
+    let currentItems = rootItems
+    for (const part of relativeParts) {
+      let group = currentItems.find((item) => item.text === part && item.items)
+      if (!group) {
+        group = { text: part, items: [], collapsed: true }
+        currentItems.push(group)
+      }
+      currentItems = group.items!
+    }
+
+    currentItems.push({ text: node.title, link: getLink(node) })
+  }
+
+  return {
+    text: categoryName,
+    items: rootItems,
+  }
 }
 
 export function consolidateSidebar(

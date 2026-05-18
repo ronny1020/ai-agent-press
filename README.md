@@ -12,6 +12,7 @@ Turn your AI-agent instruction files and config directories into a unified devel
 - **Smart Flattening**: Automatically simplifies the sidebar structure when only one scope or ecosystem is present.
 - **Headless Mode**: List agent configurations as a hierarchical JSON tree that matches the portal sidebar.
 - **Zero-config**: No manual VitePress scaffolding or repo pollution.
+- **Universal Asset Support**: Automatically handles Markdown, JSON, TypeScript, Python, and other agent assets by wrapping non-markdown files in code blocks.
 - **Ecosystem-aware**: Supports OpenAI, Claude, Gemini, Cursor, Agent, Codex, Cline, Roo, and OpenClaw.
 - **Global-first**: Simultaneously loads local repo and global (`~/.agents`, etc.) instructions by default.
 

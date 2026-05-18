@@ -4,7 +4,6 @@ import { version } from '../../package.json'
 
 import { scan } from '../core/scanner'
 import { ECOSYSTEM_IDS } from '../core/ecosystems'
-import { render, serve } from '../renderer/vitepress'
 import type { Ecosystem, SidebarItem } from '../shared/types'
 import {
   buildSidebarItems,
@@ -35,7 +34,7 @@ type CliOptions = {
   global?: boolean
   repo?: boolean
   port?: string | number
-  outDirectoryectory?: string
+  outDirectory?: string
   openai?: boolean
   claude?: boolean
   gemini?: boolean
@@ -84,6 +83,7 @@ async function previewAction(paths: string[], options: CliOptions) {
     const nodes = await scanFromCli(paths, options)
     console.error(`Found ${nodes.length} nodes.`)
 
+    const { serve } = await import('../renderer/vitepress')
     await serve(nodes, resolvePort(options), { isAllMode: !!options.all })
   } catch (error) {
     console.error('Preview server failed:', error)
@@ -113,9 +113,10 @@ cli
       const nodes = await scanFromCli(paths, options)
       console.error(`Found ${nodes.length} nodes.`)
 
-      const outDirectoryectory = options.outDirectoryectory ?? '.press/dist'
-      await render(nodes, outDirectoryectory, { isAllMode: !!options.all })
-      console.error(`Success! Site built to ${outDirectoryectory}`)
+      const outDirectory = options.outDirectory ?? '.press/dist'
+      const { render } = await import('../renderer/vitepress')
+      await render(nodes, outDirectory, { isAllMode: !!options.all })
+      console.error(`Success! Site built to ${outDirectory}`)
     } catch (error) {
       console.error('Build failed:', error)
       process.exit(1)

@@ -10,6 +10,9 @@ import {
   consolidateSidebar,
 } from '../core/sidebar'
 
+import { createRequire } from 'node:module'
+const require = createRequire(import.meta.url)
+
 export interface RenderOptions {
   isAllMode?: boolean
   port?: number
@@ -127,37 +130,46 @@ export async function prepareTemporaryDirectory(
 
     await mkdir(path.dirname(targetPath), { recursive: true })
 
-    let finalBody = content
     const isMarkdown = path.extname(node.path).toLowerCase() === '.md'
+    let finalBody: string
 
     if (isMarkdown) {
-      // Escape Vue delimiters to prevent compilation errors
-      finalBody = finalBody
-        .replaceAll('{{', '&#123;&#123;')
-        .replaceAll('}}', '&#125;&#125;')
+      finalBody = content
     } else {
       const extension = path.extname(node.path).slice(1) || 'text'
       finalBody = `\n\n\`\`\`${extension}\n${content}\n\`\`\`\n\n`
     }
 
-    // Only wrap in v-pre if it's likely to have Vue-breaking content
-    const wrapVPre = !isMarkdown || content.includes('<')
+    // Escape Vue delimiters to prevent compilation errors
+    finalBody = finalBody
+      .replaceAll('{{', '&#123;&#123;')
+      .replaceAll('}}', '&#125;&#125;')
+
+    // Only wrap in v-pre if it's markdown and likely to have Vue-breaking content
+    const wrapVPre = isMarkdown && (content.includes('<') || content.includes('{'))
 
     if (wrapVPre) {
       // Try to preserve H1 by putting it outside v-pre if possible
+      let header = ''
+      let bodyToWrap = finalBody
+
       const h1Match = finalBody.match(/^#\s+(.*)$/m)
       if (h1Match) {
-        const title = h1Match[0]
-        const rest = finalBody.slice(h1Match.index! + title.length)
-        await writeFile(
-          targetPath,
-          `${title}\n\n<div v-pre>\n\n${rest}\n\n</div>\n`,
-        )
-      } else {
-        await writeFile(targetPath, `<div v-pre>\n\n${finalBody}\n\n</div>\n`)
+        header = h1Match[0]
+        bodyToWrap = finalBody.slice(h1Match.index! + header.length)
       }
+
+      await writeFile(
+        targetPath,
+        `${header}\n\n<div v-pre>\n\n${bodyToWrap}\n\n</div>\n`,
+      )
     } else {
-      await writeFile(targetPath, finalBody)
+      // For non-markdown files, we still want a title
+      let header = ''
+      if (!isMarkdown) {
+        header = `# ${node.title}\n\n`
+      }
+      await writeFile(targetPath, `${header}${finalBody}`)
     }
   }
 
@@ -253,7 +265,8 @@ export async function prepareTemporaryDirectory(
     },
   }
 
-  const config = `import { defineConfig } from 'vitepress'
+  const vitepressModulePath = require.resolve('vitepress').replaceAll('\\', '/')
+  const config = `import { defineConfig } from '${vitepressModulePath}'
 
 export default defineConfig(${JSON.stringify(vitepressConfig, undefined, 2)})
 `
@@ -269,8 +282,6 @@ function pickIndexNode(nodes: ContentNode[]): ContentNode | undefined {
 }
 
 function createPageId(node: ContentNode, usedPageIds: Set<string>): string {
-  const stem = path.basename(node.path, path.extname(node.path))
-  // Hierarchical structure: {scope}/{ecosystem}/{category}/{name}
   // Mapping internal types to URL category names
   const categoryMap: Record<string, string> = {
     agent: 'agents',
@@ -280,7 +291,24 @@ function createPageId(node: ContentNode, usedPageIds: Set<string>): string {
     workflow: 'resources',
   }
   const category = categoryMap[node.type] || node.type
-  const parts = [node.scope, node.ecosystem, category, stem]
+
+  // Try to find the category folder in the path to get nesting
+  // e.g., /path/to/.agents/skills/nested/tool.sh -> nested/tool
+  const normalizedPath = node.path.replaceAll('\\', '/')
+  const searchString = `/${category}/`
+  const lastIndex = normalizedPath.lastIndexOf(searchString)
+
+  const relativeParts: string[] = []
+  if (lastIndex !== -1) {
+    const afterCategory = normalizedPath.slice(lastIndex + searchString.length)
+    const segments = afterCategory.split('/')
+    if (segments.length > 1) {
+      relativeParts.push(...segments.slice(0, -1).map((p) => slugify(p)))
+    }
+  }
+
+  const stem = path.basename(node.path, path.extname(node.path))
+  const parts = [node.scope, node.ecosystem, category, ...relativeParts, stem]
     .map((p) => p || 'unknown')
     .map((p) => slugify(p))
   const prefix = parts.join('/')

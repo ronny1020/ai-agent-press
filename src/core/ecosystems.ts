@@ -41,11 +41,13 @@ export const ECOSYSTEMS: EcosystemDefinition[] = [
     localPatterns: [
       'openclaw.json',
       'openclaw.json5',
-      '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml}',
+      '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
+      '.openclaw/**/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
     ],
     globalPatterns: [
       '.openclaw/openclaw.json',
-      '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml}',
+      '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
+      '.openclaw/**/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
     ],
     detect: ({ lowerPath, name }) =>
       lowerPath.includes('.openclaw') ||
@@ -55,40 +57,49 @@ export const ECOSYSTEMS: EcosystemDefinition[] = [
   createEcosystem({
     id: 'openai',
     label: 'OpenAI',
-    localPatterns: ['OPENAI.md', '.openai/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    globalPatterns: ['.openai/**/*.{md,json,jsonc,json5,yml,yaml}'],
+    localPatterns: [
+      'OPENAI.md',
+      '.openai/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
+    ],
+    globalPatterns: ['.openai/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}'],
     detect: ({ lowerPath, name }) =>
       lowerPath.includes('.openai') || name === 'openai.md',
   }),
   createEcosystem({
     id: 'agent',
     label: 'Agent',
-    localPatterns: ['AGENTS.md', '.agents/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    globalPatterns: ['.agents/**/*.{md,json,jsonc,json5,yml,yaml}'],
+    localPatterns: [
+      'AGENTS.md',
+      '.agents/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
+    ],
+    globalPatterns: ['.agents/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}'],
     detect: ({ lowerPath, name }) =>
       lowerPath.includes('.agents') || name === 'agents.md',
   }),
   createEcosystem({
     id: 'codex',
     label: 'Codex',
-    localPatterns: ['CODEX.md', '.codex/**/*.{md,json,jsonc,json5,yml,yaml}'],
-    globalPatterns: ['.codex/**/*.{md,json,jsonc,json5,yml,yaml}'],
+    localPatterns: [
+      'CODEX.md',
+      '.codex/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
+    ],
+    globalPatterns: ['.codex/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}'],
     detect: ({ lowerPath, name }) =>
       lowerPath.includes('.codex') || name === 'codex.md',
   }),
   createEcosystem({
     id: 'claude',
     label: 'Claude',
-    localPatterns: ['CLAUDE.md', '.claude/**/*.md'],
-    globalPatterns: ['.claude/**/*.md'],
+    localPatterns: ['CLAUDE.md', '.claude/**/*.{md,ts,js,py,sh}'],
+    globalPatterns: ['.claude/**/*.{md,ts,js,py,sh}'],
     detect: ({ lowerPath }) =>
       lowerPath.includes('.claude') || lowerPath.endsWith('claude.md'),
   }),
   createEcosystem({
     id: 'gemini',
     label: 'Gemini',
-    localPatterns: ['GEMINI.md', '.gemini/**/*.md'],
-    globalPatterns: ['.config/gemini/**/*.md'],
+    localPatterns: ['GEMINI.md', '.gemini/**/*.{md,ts,js,py,sh}'],
+    globalPatterns: ['.config/gemini/**/*.{md,ts,js,py,sh}'],
     detect: ({ lowerPath }) =>
       lowerPath.includes('.gemini') ||
       lowerPath.includes('gemini') ||
@@ -97,23 +108,32 @@ export const ECOSYSTEMS: EcosystemDefinition[] = [
   createEcosystem({
     id: 'cursor',
     label: 'Cursor',
-    localPatterns: ['.cursor/rules/**/*.md'],
-    globalPatterns: ['.cursor/rules/**/*.md'],
+    localPatterns: ['.cursor/rules/**/*.{md,ts,js,py,sh}'],
+    globalPatterns: ['.cursor/rules/**/*.{md,ts,js,py,sh}'],
     detect: ({ lowerPath }) => lowerPath.includes('.cursor'),
   }),
   createEcosystem({
     id: 'cline',
     label: 'Cline',
-    localPatterns: ['.cline/**/*.md', '.clinerules', '.clinerules/**/*.md'],
-    globalPatterns: ['.cline/**/*.md', '.clinerules'],
+    localPatterns: [
+      '.cline/**/*.{md,ts,js,py,sh}',
+      '.clinerules',
+      '.clinerules/**/*.{md,ts,js,py,sh}',
+    ],
+    globalPatterns: ['.cline/**/*.{md,ts,js,py,sh}', '.clinerules'],
     detect: ({ lowerPath, name }) =>
       lowerPath.includes('.cline') || name === '.clinerules',
   }),
   createEcosystem({
     id: 'roo',
     label: 'Roo',
-    localPatterns: ['.roo/**/*.md', '.roomodes', '.roorules', '.roorules-*'],
-    globalPatterns: ['.roo/**/*.md', '.roomodes', '.roorules'],
+    localPatterns: [
+      '.roo/**/*.{md,ts,js,py,sh}',
+      '.roomodes',
+      '.roorules',
+      '.roorules-*',
+    ],
+    globalPatterns: ['.roo/**/*.{md,ts,js,py,sh}', '.roomodes', '.roorules'],
     detect: ({ lowerPath, name }) =>
       lowerPath.includes('.roo') ||
       name === '.roomodes' ||
