@@ -5,7 +5,7 @@ Welcome to the AI Agent Press portal for this repository.
 ## Agents Summary
 
 - **Primary Agent**: Gemini CLI (System Orchestrator)
-- **Specialized Skills**: 
+- **Specialized Skills**:
   - `skill-creator`: For extending CLI capabilities.
   - `codebase_investigator`: For deep architectural analysis.
   - `github-pr`: For automated, template-compliant PR creation using `gh`.
@@ -31,7 +31,6 @@ Welcome to the AI Agent Press portal for this repository.
 - **Roo**: `.roo/`, `.roomodes`, `.roorules`
 - **OpenClaw**: `openclaw.json`, `openclaw.json5`, `.openclaw/`
 
-
 ## Current CLI Behavior
 
 - `press` starts preview mode by default.
@@ -40,13 +39,13 @@ Welcome to the AI Agent Press portal for this repository.
 - `press list` (Headless mode) emits a hierarchical JSON structure identical to the portal sidebar.
 - `press list --json` emits the normalized content graph, including parsed `metadata.ecosystemConfig` settings objects.
 - `press list --all --json` explicitly includes all supported ecosystems and scope/ecosystem layers.
-- **Scope Filtering**: 
+- **Scope Filtering**:
   - `press --global`: Shows only global configurations.
   - `press --repo`: Shows only repository configurations.
   - `press` (no flags): Shows both.
 - Ecosystem flags such as `--gemini`, `--claude`, `--cursor`, and `--openclaw` filter scan results and can be combined with scope flags.
 - **Hierarchical Sidebar**: Content is organized as Sections (Global/Repo) -> Ecosystems -> Categories (Instructions, Agents, Skills, Resources).
-- **Flattening Logic**: 
+- **Flattening Logic**:
   - The "Global/Repo" layer is omitted if only one scope is active.
   - The "Ecosystem" layer is omitted if only one ecosystem is active.
 - **Hierarchical URLs**: Pages follow the `/{scope}/{ecosystem}/{category}/{name}` pattern.
@@ -56,12 +55,15 @@ Welcome to the AI Agent Press portal for this repository.
 ## Development Standards
 
 ### Configuration Files
+
 - **Standalone Configs**: Prefer standalone configuration files (e.g., `.eslintrc.json`, `.lintstagedrc.json`, `tsconfig.json`) instead of embedding configurations inside `package.json`. This keeps the project structure clean and manageable.
 
 ### Commit Style
+
 - **Conventional Commits**: All contributions must use the `feat(xxx):`, `fix(xxx):` etc. format.
 
 ### AI Agent Protocols
+
 - **Source Control**: DO NOT stage or commit changes unless explicitly requested by the user.
 - **Git Tags**: DO NOT create, push, or maintain git tags. This is strictly prohibited.
 - **PR Readiness**: Agents must read `.github/PULL_REQUEST_TEMPLATE.md` before initiating PR tasks.

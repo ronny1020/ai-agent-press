@@ -1,13 +1,12 @@
 {
   "name": "ai-agent-press",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "Transform AI agent ecosystem files into searchable documentation portals",
   "type": "module",
   "packageManager": "bun@1.3.7",
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
   "bin": {
-    "press": "./dist/index.mjs"
+    "press": "./dist/index.js"
   },
   "files": [
     "dist"
@@ -20,8 +19,7 @@
     "list": "bun run press list",
     "preview": "bun run press preview",
     "press:build": "bun run press build --all",
-    "stub": "unbuild --stub",
-    "build": "unbuild",
+    "build": "rm -rf dist && bun build src/cli/index.ts --outfile dist/index.js --target node --bundle --external vitepress",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "lint-staged": "bunx lint-staged",
@@ -74,7 +72,6 @@
     "oxlint": "^1.65.0",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.3",
-    "unbuild": "^3.6.1"
+    "typescript-eslint": "^8.59.3"
   }
 }

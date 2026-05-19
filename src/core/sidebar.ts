@@ -90,7 +90,9 @@ function buildHierarchicalCategory(
 
     const relativeParts: string[] = []
     if (lastIndex !== -1) {
-      const afterCategory = normalizedPath.slice(lastIndex + searchString.length)
+      const afterCategory = normalizedPath.slice(
+        lastIndex + searchString.length,
+      )
       const segments = afterCategory.split('/')
       if (segments.length > 1) {
         relativeParts.push(...segments.slice(0, -1))

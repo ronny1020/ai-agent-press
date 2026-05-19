@@ -1,21 +1,21 @@
 documentation:
   - changed-files:
-      - "*.md"
-      - ".github/ISSUE_TEMPLATE/*.md"
-      - "README.md"
-      - "CONTRIBUTING.md"
+      - '*.md'
+      - '.github/ISSUE_TEMPLATE/*.md'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
 
 feature:
   - changed-files:
-      - "src/cli/*"
-      - "src/core/*"
+      - 'src/cli/*'
+      - 'src/core/*'
 
 renderer:
   - changed-files:
-      - "src/renderer/*"
+      - 'src/renderer/*'
 
 test:
   - changed-files:
-      - "**/*.test.ts"
-      - "**/*.e2e.ts"
-      - "playwright.config.ts"
+      - '**/*.test.ts'
+      - '**/*.e2e.ts'
+      - 'playwright.config.ts'

@@ -51,18 +51,29 @@ describe('Universal Asset Support', () => {
       }),
     ]
 
-    temporaryDirectory = await prepareTemporaryDirectory(nodes, { isAllMode: true })
+    temporaryDirectory = await prepareTemporaryDirectory(nodes, {
+      isAllMode: true,
+    })
 
-    const tsContent = await readFile(path.join(temporaryDirectory, 'repo/gemini/skills/tool.md'), 'utf8')
+    const tsContent = await readFile(
+      path.join(temporaryDirectory, 'repo/gemini/skills/tool.md'),
+      'utf8',
+    )
     expect(tsContent).toContain('# TypeScript Skill')
     expect(tsContent).toContain('```ts')
     expect(tsContent).toContain('export const run')
 
-    const pyContent = await readFile(path.join(temporaryDirectory, 'repo/gemini/skills/script.md'), 'utf8')
+    const pyContent = await readFile(
+      path.join(temporaryDirectory, 'repo/gemini/skills/script.md'),
+      'utf8',
+    )
     expect(pyContent).toContain('# Python Script')
     expect(pyContent).toContain('```py')
 
-    const shContent = await readFile(path.join(temporaryDirectory, 'repo/gemini/skills/install.md'), 'utf8')
+    const shContent = await readFile(
+      path.join(temporaryDirectory, 'repo/gemini/skills/install.md'),
+      'utf8',
+    )
     expect(shContent).toContain('# Shell Script')
     expect(shContent).toContain('```sh')
   })
@@ -80,12 +91,20 @@ describe('Universal Asset Support', () => {
       }),
     ]
 
-    temporaryDirectory = await prepareTemporaryDirectory(nodes, { isAllMode: true })
+    temporaryDirectory = await prepareTemporaryDirectory(nodes, {
+      isAllMode: true,
+    })
 
-    const mdContent = await readFile(path.join(temporaryDirectory, 'index.md'), 'utf8')
+    const mdContent = await readFile(
+      path.join(temporaryDirectory, 'index.md'),
+      'utf8',
+    )
     expect(mdContent).toContain('&#123;&#123; mustache &#125;&#125;')
 
-    const tsContent = await readFile(path.join(temporaryDirectory, 'repo/gemini/skills/script.md'), 'utf8')
+    const tsContent = await readFile(
+      path.join(temporaryDirectory, 'repo/gemini/skills/script.md'),
+      'utf8',
+    )
     expect(tsContent).toContain('&#123;&#123; value &#125;&#125;')
   })
 
@@ -103,14 +122,22 @@ describe('Universal Asset Support', () => {
       }),
     ]
 
-    temporaryDirectory = await prepareTemporaryDirectory(nodes, { isAllMode: true })
+    temporaryDirectory = await prepareTemporaryDirectory(nodes, {
+      isAllMode: true,
+    })
 
-    const content = await readFile(path.join(temporaryDirectory, 'repo/gemini/skills/nested/deep/tool.md'), 'utf8')
+    const content = await readFile(
+      path.join(temporaryDirectory, 'repo/gemini/skills/nested/deep/tool.md'),
+      'utf8',
+    )
     expect(content).toContain('# Deeply Nested Skill')
     expect(content).toContain('```ts')
     expect(content).toContain('console.log("deep")')
 
-    const config = await readFile(path.join(temporaryDirectory, '.vitepress', 'config.ts'), 'utf8')
+    const config = await readFile(
+      path.join(temporaryDirectory, '.vitepress', 'config.js'),
+      'utf8',
+    )
     expect(config).toContain('"text": "nested"')
     expect(config).toContain('"text": "deep"')
     expect(config).toContain('"text": "Deeply Nested Skill"')
@@ -124,9 +151,14 @@ describe('Universal Asset Support', () => {
       }),
     ]
 
-    temporaryDirectory = await prepareTemporaryDirectory(nodes, { isAllMode: true })
+    temporaryDirectory = await prepareTemporaryDirectory(nodes, {
+      isAllMode: true,
+    })
 
-    const content = await readFile(path.join(temporaryDirectory, 'index.md'), 'utf8')
+    const content = await readFile(
+      path.join(temporaryDirectory, 'index.md'),
+      'utf8',
+    )
     expect(content).toContain('<div v-pre>')
     expect(content).toContain('# Conflict')
   })
@@ -139,9 +171,14 @@ describe('Universal Asset Support', () => {
       }),
     ]
 
-    temporaryDirectory = await prepareTemporaryDirectory(nodes, { isAllMode: true })
+    temporaryDirectory = await prepareTemporaryDirectory(nodes, {
+      isAllMode: true,
+    })
 
-    const content = await readFile(path.join(temporaryDirectory, 'index.md'), 'utf8')
+    const content = await readFile(
+      path.join(temporaryDirectory, 'index.md'),
+      'utf8',
+    )
     expect(content).not.toContain('<div v-pre>')
   })
 })

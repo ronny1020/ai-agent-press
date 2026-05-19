@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 const PRESS_ARGS = process.env.PRESS_ARGS ?? ''
 const TIMEOUT_MS = 15_000

@@ -103,7 +103,7 @@ describe('VitePress renderer', () => {
     ])
 
     const config = await readFile(
-      path.join(temporaryDirectory, '.vitepress', 'config.ts'),
+      path.join(temporaryDirectory, '.vitepress', 'config.js'),
       'utf8',
     )
     expect(config).toContain('defineConfig')
@@ -139,7 +139,7 @@ describe('VitePress renderer', () => {
     )
 
     const config = await readFile(
-      path.join(temporaryDirectory, '.vitepress', 'config.ts'),
+      path.join(temporaryDirectory, '.vitepress', 'config.js'),
       'utf8',
     )
     expect(config).toContain('Agent')
@@ -173,7 +173,7 @@ describe('VitePress renderer', () => {
     )
 
     const config = await readFile(
-      path.join(temporaryDirectory, '.vitepress', 'config.ts'),
+      path.join(temporaryDirectory, '.vitepress', 'config.js'),
       'utf8',
     )
     expect(config).toContain('Gemini Instructions')

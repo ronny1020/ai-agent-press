@@ -10,9 +10,6 @@ import {
   consolidateSidebar,
 } from '../core/sidebar'
 
-import { createRequire } from 'node:module'
-const require = createRequire(import.meta.url)
-
 export interface RenderOptions {
   isAllMode?: boolean
   port?: number
@@ -146,7 +143,8 @@ export async function prepareTemporaryDirectory(
       .replaceAll('}}', '&#125;&#125;')
 
     // Only wrap in v-pre if it's markdown and likely to have Vue-breaking content
-    const wrapVPre = isMarkdown && (content.includes('<') || content.includes('{'))
+    const wrapVPre =
+      isMarkdown && (content.includes('<') || content.includes('{'))
 
     if (wrapVPre) {
       // Try to preserve H1 by putting it outside v-pre if possible
@@ -265,14 +263,13 @@ export async function prepareTemporaryDirectory(
     },
   }
 
-  const vitepressModulePath = require.resolve('vitepress').replaceAll('\\', '/')
-  const config = `import { defineConfig } from '${vitepressModulePath}'
+  const config = `import { defineConfig } from 'vitepress'
 
 export default defineConfig(${JSON.stringify(vitepressConfig, undefined, 2)})
 `
   const configDirectory = path.join(temporaryDirectory, '.vitepress')
   await mkdir(configDirectory, { recursive: true })
-  await writeFile(path.join(configDirectory, 'config.ts'), config)
+  await writeFile(path.join(configDirectory, 'config.js'), config)
 
   return temporaryDirectory
 }

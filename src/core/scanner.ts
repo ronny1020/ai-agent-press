@@ -32,7 +32,10 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
           ),
         ),
         normalizeGlob(
-          path.join(root, '.agents/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}'),
+          path.join(
+            root,
+            '.agents/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
+          ),
         ),
       ])
     : []
