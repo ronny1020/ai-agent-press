@@ -42,12 +42,10 @@ export const ECOSYSTEMS: EcosystemDefinition[] = [
       'openclaw.json',
       'openclaw.json5',
       '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
-      '.openclaw/**/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
     ],
     globalPatterns: [
       '.openclaw/openclaw.json',
       '.openclaw/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
-      '.openclaw/**/**/*.{md,json,jsonc,json5,yml,yaml,ts,js,py,sh}',
     ],
     detect: ({ lowerPath, name }) =>
       lowerPath.includes('.openclaw') ||

@@ -53,8 +53,8 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
       ])
     : []
 
-  const home = homedir()
-  const globalBasePaths = [home]
+  const home = path.resolve(homedir())
+  let globalBasePaths = [home]
 
   // Add internal package root
   const internalRoot = getInternalAgentsPath()
@@ -65,11 +65,19 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
   // Add global node_modules locations
   if (process.platform === 'win32') {
     if (process.env.APPDATA) {
-      globalBasePaths.push(path.join(process.env.APPDATA, 'npm/node_modules'))
+      globalBasePaths.push(
+        path.resolve(path.join(process.env.APPDATA, 'npm/node_modules')),
+      )
     }
   } else {
     globalBasePaths.push('/usr/local/lib/node_modules', '/usr/lib/node_modules')
   }
+
+  // Deduplicate against roots to avoid double scanning when running in home or internal root
+  const resolvedRoots = new Set(roots.map((r) => path.resolve(r)))
+  globalBasePaths = [...new Set(globalBasePaths)].filter(
+    (base) => !resolvedRoots.has(base),
+  )
 
   const globalSearchPaths = includeGlobal
     ? ECOSYSTEMS.flatMap((ecosystem) =>
@@ -90,7 +98,10 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
       absolute: true,
       ignore: ['**/node_modules/**', '**/README.md'],
     }),
-    fg(globalSearchPaths, { absolute: true, ignore: ['**/README.md'] }),
+    fg(globalSearchPaths, {
+      absolute: true,
+      ignore: ['**/node_modules/**', '**/README.md'],
+    }),
   ])
 
   const nodes: ContentNode[] = []
