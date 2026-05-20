@@ -19,7 +19,7 @@
     "list": "bun run press list",
     "preview": "bun run press preview",
     "press:build": "bun run press build --all",
-    "build": "rm -rf dist && bun build src/cli/index.ts --outfile dist/index.js --target node --bundle --external vitepress",
+    "build": "rm -rf dist && bun build src/cli/index.ts --outfile dist/index.js --target node --bundle --external vitepress && tsc --emitDeclarationOnly --declaration --declarationDir dist --noEmit false --rootDir src",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "lint-staged": "bunx lint-staged",

@@ -382,9 +382,13 @@ function createPageId(node: ContentNode, usedPageIds: Set<string>): string {
   }
 
   const stem = path.basename(node.path, path.extname(node.path))
-  const parts = [node.scope, node.ecosystem, category, ...relativeParts, stem]
-    .map((p) => p || 'unknown')
-    .map((p) => slugify(p))
+  const parts = [
+    slugify(node.scope || 'unknown'),
+    slugify(node.ecosystem || 'unknown'),
+    slugify(category || 'unknown'),
+    ...relativeParts,
+    slugify(stem || 'unknown'),
+  ]
   const prefix = parts.join('/')
   let pageId = prefix
   let suffix = 2
