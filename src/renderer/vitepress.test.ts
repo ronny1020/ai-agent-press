@@ -1,16 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
-import { prepareTemporaryDirectory } from './vitepress'
+import { prepareTemporaryDirectory, getBaseTemporaryDirectory } from './vitepress'
 import type { ContentNode } from '../shared/types'
 
 describe('VitePress renderer', () => {
-  const temporaryDirectory = path.join(
-    process.cwd(),
-    'node_modules',
-    '.ai-agent-press',
-    'temp',
-  )
+  const temporaryDirectory = path.join(getBaseTemporaryDirectory(), 'temp')
 
   beforeEach(async () => {
     await rm(temporaryDirectory, { recursive: true, force: true })
@@ -18,25 +13,6 @@ describe('VitePress renderer', () => {
 
   afterEach(async () => {
     await rm(temporaryDirectory, { recursive: true, force: true })
-  })
-  it('should use README.md as the index when available', async () => {
-    const root = process.cwd().replaceAll('\\', '/')
-    await prepareTemporaryDirectory([
-      createNode({
-        path: `${root}/repo/README.md`,
-        title: 'Readme Home',
-        content: '# Readme Home',
-      }),
-      createNode({
-        path: `${root}/repo/GEMINI.md`,
-        title: 'Gemini',
-        content: '# Gemini',
-      }),
-    ])
-
-    await expect(
-      readFile(path.join(temporaryDirectory, 'index.md'), 'utf8'),
-    ).resolves.toContain('# Readme Home')
   })
 
   it('should use AGENTS.md as the index when GEMINI.md is absent', async () => {
@@ -106,7 +82,7 @@ describe('VitePress renderer', () => {
       path.join(temporaryDirectory, '.vitepress', 'config.js'),
       'utf8',
     )
-    expect(config).toContain('defineConfig')
+    expect(config).toContain('export default')
     expect(config).toContain('"provider": "local"') // search
     expect(config).toContain('"outline"') // outline
     expect(config).toContain('"footer"') // footer

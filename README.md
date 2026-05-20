@@ -1,27 +1,32 @@
 # ai-agent-press 🚀
 
-**ai-agent-press** is a zero-config, **Bun-powered** CLI tool that transforms AI agent ecosystem files into searchable documentation portals and structured content graphs.
+**ai-agent-press** is a zero-config, **high-performance** CLI tool that transforms AI agent ecosystem files into searchable documentation portals and structured content graphs.
 
-Turn your AI-agent instruction files and config directories into a unified developer portal or a hierarchical JSON stream in seconds.
+Turn your AI-agent instruction files and config directories into a unified developer portal or a hierarchical JSON stream in seconds. Built for the modern JavaScript ecosystem, it runs anywhere **Node.js 20+** or **Bun** is available.
 
 ## ✨ Features
 
 - **Filesystem-first**: Scans your repo for AI-agent-related files automatically.
-- **Bun-powered**: Native speed and built-in testing with `bun test`.
+- **Cross-runtime**: Fully compatible with Node.js 20+ and Bun.
 - **Hierarchical Navigation**: Strictly organized sidebar and URLs (`/{scope}/{ecosystem}/{category}/{name}`).
 - **Smart Flattening**: Automatically simplifies the sidebar structure when only one scope or ecosystem is present.
 - **Headless Mode**: List agent configurations as a hierarchical JSON tree that matches the portal sidebar.
-- **Zero-config**: No manual VitePress scaffolding or repo pollution.
+- **Zero-config**: No manual VitePress scaffolding or repo pollution. Portals use transient `config.js` for maximum compatibility.
 - **Universal Asset Support**: Automatically handles Markdown, JSON, TypeScript, Python, and other agent assets by wrapping non-markdown files in code blocks.
 - **Ecosystem-aware**: Supports OpenAI, Claude, Gemini, Cursor, Agent, Codex, Cline, Roo, and OpenClaw.
-- **Global-first**: Simultaneously loads local repo and global (`~/.agents`, etc.) instructions by default.
+- **Global-first**: Simultaneously loads local repo and global (`~/.agents`, `%APPDATA%/npm/node_modules`, etc.) instructions by default.
+- **Standalone ESM**: Bundled into a single file for maximum portability.
 
 ## 🚀 Quick Start
 
 ### Installation
 
 ```bash
-npm add -g ai-agent-press@latest
+# Using Bun (Recommended)
+bun install -g ai-agent-press
+
+# Using NPM
+npm install -g ai-agent-press
 ```
 
 ### Usage
@@ -46,6 +51,25 @@ press list --claude --json
 press preview --gemini --cursor
 press list --all --json
 ```
+
+## 🏗 Architecture
+
+### Multi-tiered Scanning
+
+**ai-agent-press** employs a robust discovery strategy:
+
+1.  **Current Repository**: Scans for ecosystem-specific files (e.g., `GEMINI.md`, `CLAUDE.md`) and the `.agents/` directory.
+2.  **Global Home**: Scans `~/.agents/` and other ecosystem hidden folders in the user's home directory.
+3.  **Global Node Modules**: Scans for agent instructions bundled within globally installed NPM packages on Windows (`%APPDATA%/npm/node_modules`) and Unix (`/usr/local/lib/node_modules`).
+4.  **Internal Agents**: Includes the tool's own built-in instructions, ensuring core capabilities are always documented.
+
+### Portal Generation
+
+The `preview` and `build` commands generate a transient VitePress site:
+
+- **Location**: Transient site files are stored in the user's platform-specific cache directory (e.g., `~/.cache/ai-agent-press/temp` on Linux, `~/Library/Caches/ai-agent-press/temp` on macOS, or `%LOCALAPPDATA%/ai-agent-press/temp` on Windows).
+- **Configuration**: Uses a dynamically generated `config.js` to avoid TypeScript overhead at runtime.
+- **Content**: Markdown files are rendered directly; non-markdown assets are automatically wrapped in language-appropriate code blocks.
 
 ## 🛠 Commands & Flags
 
@@ -106,7 +130,7 @@ To keep navigation clean, **ai-agent-press** automatically flattens layers:
 
 ## 📂 Project Philosophy
 
-**ai-agent-press** aims to unify fragmented AI ecosystems into a single, searchable experience without repo pollution. All temporary files are stored in `node_modules/.ai-agent-press`, keeping your project clean.
+**ai-agent-press** aims to unify fragmented AI ecosystems into a single, searchable experience without repo pollution. All temporary files are stored in the user's home cache directory, keeping your project clean.
 
 ## 🤝 Contributing
 

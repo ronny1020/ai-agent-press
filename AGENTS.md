@@ -31,6 +31,23 @@ Welcome to the AI Agent Press portal for this repository.
 - **Roo**: `.roo/`, `.roomodes`, `.roorules`
 - **OpenClaw**: `openclaw.json`, `openclaw.json5`, `.openclaw/`
 
+## Architecture Mandates
+
+- **Runtime**: Use `bun` for development and testing (`bun test`).
+- **Build**: Use `bun build` to generate a Node-executable ESM bundle (`dist/index.js`).
+- **Portal Configuration**: Always generate `config.js` for VitePress to ensure compatibility and avoid runtime TS overhead.
+- **Global Scanning**:
+  - Support `%APPDATA%/npm/node_modules` for Windows global package discovery.
+  - Support `/usr/local/lib/node_modules` and `/usr/lib/node_modules` for Unix global package discovery.
+  - Automatically include internal package agents (`../../.agents`) in the global scope.
+- **Sidebar Structure**: The sidebar MUST separate content into "Global" and "Current Repo" top-level sections IF both exist.
+  - **Scope Flattening**: If only one scope is active (e.g., via `--global` or if only one exists), the top-level scope layer MUST be omitted.
+  - **Ecosystem Flattening**: If only one ecosystem is active (e.g., via flags like `--gemini` or if only one exists), the ecosystem layer MUST be omitted.
+- **Hierarchy**: Sections -> Ecosystems -> Categories (Skills, Instructions, Agents).
+- **URL Pattern**: URLs MUST follow a hierarchical structure: `/{scope}/{ecosystem}/{category}/{name}`.
+- **Headless Mode**: The `list` command MUST output the exact same hierarchical structure as the portal sidebar.
+- **Global Loading**: Global and Repo instructions MUST be loaded simultaneously by default.
+
 ## Current CLI Behavior
 
 - `press` starts preview mode by default.
@@ -53,6 +70,14 @@ Welcome to the AI Agent Press portal for this repository.
 - Preview/build output includes per-ecosystem review pages that group discovered files and parsed settings.
 
 ## Development Standards
+
+### Tooling & Ignore Rules
+
+- **Linting**: `bun run lint` (using ESLint with `ignores` for `dist` and `.press`).
+- **Formatting**: `bunx prettier --write .`.
+- **Testing**: `bun run test:all` (includes unit and Playwright e2e tests).
+- **Versioning**: Increment beta versions in `package.json`.
+- **Ignore Files**: Ensure `.gitignore`, `.prettierignore`, and tool-specific `ignores` cover all build artifacts (`dist/`, `.press/`, etc.).
 
 ### Configuration Files
 

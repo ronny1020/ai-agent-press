@@ -5,7 +5,7 @@ test('portal loads and shows content', async ({ page }) => {
   await expect(page).toHaveTitle(/AI Agent Portal/)
   await page.waitForSelector('.vp-doc h1')
   await expect(
-    page.getByRole('heading', { name: 'AI Agent Portal' }),
+    page.getByRole('heading', { name: 'Gemini CLI Project Rules' }),
   ).toBeVisible()
 })
 

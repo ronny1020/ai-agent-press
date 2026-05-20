@@ -8,7 +8,8 @@ test('agent mode shows agents, skills, and rules', async ({ page }) => {
   await expect(page.locator('.VPSidebar')).toBeVisible()
 
   // github-pr (skill) should be visible
-  const skillLink = page.locator('.VPSidebar a:has-text("github-pr")')
+  // Use .first() because it might appear in both Global and Repo scopes now
+  const skillLink = page.locator('.VPSidebar a:has-text("github-pr")').first()
   await expect(skillLink).toBeVisible()
 })
 

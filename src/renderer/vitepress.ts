@@ -1,8 +1,11 @@
 import path from 'node:path'
-import { mkdir, writeFile, rm } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { mkdir, writeFile, rm, symlink } from 'node:fs/promises'
 import { homedir } from 'node:os'
+import { existsSync } from 'node:fs'
 import type { ContentNode, SidebarItem } from '../shared/types'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
 import { build as vitepressBuild, createServer } from 'vitepress'
 import {
   buildSidebarItems,
@@ -70,17 +73,31 @@ export async function prepareTemporaryDirectory(
     )
   })
 
-  const root = process.cwd()
-  const nodeModulesPath = path.join(root, 'node_modules')
-
-  const baseTemporaryDirectory = existsSync(nodeModulesPath)
-    ? path.join(nodeModulesPath, '.ai-agent-press')
-    : path.join(homedir(), '.cache', 'ai-agent-press')
-
+  const baseTemporaryDirectory = getBaseTemporaryDirectory()
   const temporaryDirectory = path.join(baseTemporaryDirectory, 'temp')
 
   await rm(temporaryDirectory, { recursive: true, force: true })
   await mkdir(temporaryDirectory, { recursive: true })
+
+  let nodeModulesPath = ''
+  // Link node_modules so VitePress can resolve dependencies from the temp directory
+  try {
+    const vitepressPackagePath = require.resolve('vitepress/package.json')
+    nodeModulesPath = path.resolve(
+      path.dirname(vitepressPackagePath),
+      '..',
+      '..',
+    )
+    if (existsSync(nodeModulesPath)) {
+      await symlink(
+        nodeModulesPath,
+        path.join(temporaryDirectory, 'node_modules'),
+        'dir',
+      )
+    }
+  } catch (error) {
+    console.warn('Could not symlink node_modules to temp directory:', error)
+  }
 
   const usedPageIds = new Set<string>()
   const nodeToLink = new Map<ContentNode, string>()
@@ -261,12 +278,42 @@ export async function prepareTemporaryDirectory(
         next: 'Next',
       },
     },
+    vite: {
+      cacheDir: path.join(temporaryDirectory, '.vite'),
+      resolve: {
+        preserveSymlinks: true,
+        alias: [
+          {
+            find: '@vue/devtools-api',
+            replacement: require.resolve('@vue/devtools-api'),
+          },
+          {
+            find: '@vueuse/core',
+            replacement: require.resolve('@vueuse/core'),
+          },
+          {
+            find: '@vueuse/integrations/useFocusTrap',
+            replacement: require.resolve('@vueuse/integrations/useFocusTrap'),
+          },
+          {
+            find: 'mark.js/src/vanilla.js',
+            replacement: require.resolve('mark.js/src/vanilla.js'),
+          },
+          {
+            find: 'minisearch',
+            replacement: require.resolve('minisearch'),
+          },
+        ],
+      },
+      server: {
+        fs: {
+          allow: [temporaryDirectory, nodeModulesPath].filter(Boolean),
+        },
+      },
+    },
   }
 
-  const config = `import { defineConfig } from 'vitepress'
-
-export default defineConfig(${JSON.stringify(vitepressConfig, undefined, 2)})
-`
+  const config = `export default ${JSON.stringify(vitepressConfig, undefined, 2)}\n`
   const configDirectory = path.join(temporaryDirectory, '.vitepress')
   await mkdir(configDirectory, { recursive: true })
   await writeFile(path.join(configDirectory, 'config.js'), config)
@@ -275,7 +322,37 @@ export default defineConfig(${JSON.stringify(vitepressConfig, undefined, 2)})
 }
 
 function pickIndexNode(nodes: ContentNode[]): ContentNode | undefined {
-  return nodes[0]
+  const repoNodes = nodes.filter((n) => n.scope === 'repo')
+
+  // Prefer instruction nodes in the root
+  const priorities = ['GEMINI.MD', 'AGENTS.MD']
+
+  for (const priority of priorities) {
+    const found = repoNodes.find(
+      (n) => path.basename(n.path).toUpperCase() === priority,
+    )
+    if (found) return found
+  }
+
+  return repoNodes[0] || nodes[0]
+}
+
+export function getBaseTemporaryDirectory(): string {
+  if (process.platform === 'win32') {
+    return path.join(
+      process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'),
+      'ai-agent-press',
+    )
+  }
+
+  if (process.platform === 'darwin') {
+    return path.join(homedir(), 'Library', 'Caches', 'ai-agent-press')
+  }
+
+  return (
+    process.env.XDG_CACHE_HOME ||
+    path.join(homedir(), '.cache', 'ai-agent-press')
+  )
 }
 
 function createPageId(node: ContentNode, usedPageIds: Set<string>): string {

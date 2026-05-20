@@ -2,6 +2,7 @@ import path from 'node:path'
 import fg from 'fast-glob'
 import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import matter from 'gray-matter'
 import type { ContentNode, Ecosystem } from '../shared/types'
 import { ECOSYSTEMS, detectNodeType, findEcosystem } from './ecosystems'
@@ -18,6 +19,18 @@ export interface ScanOptions {
  */
 function normalizeGlob(pathName: string): string {
   return pathName.replaceAll('\\', '/')
+}
+
+function getInternalAgentsPath(): string {
+  try {
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(__filename)
+    // Check if we're in dist/ or src/core/
+    const isDistribution = __dirname.endsWith('dist') || __dirname.includes('dist/')
+    return path.resolve(__dirname, isDistribution ? '..' : '../..')
+  } catch {
+    return ''
+  }
 }
 
 export async function scan(options: ScanOptions): Promise<ContentNode[]> {
@@ -41,17 +54,43 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
     : []
 
   const home = homedir()
+  const globalBasePaths = [home]
+
+  // Add internal package root
+  const internalRoot = getInternalAgentsPath()
+  if (internalRoot && internalRoot !== home) {
+    globalBasePaths.push(internalRoot)
+  }
+
+  // Add global node_modules locations
+  if (process.platform === 'win32') {
+    if (process.env.APPDATA) {
+      globalBasePaths.push(path.join(process.env.APPDATA, 'npm/node_modules'))
+    }
+  } else {
+    globalBasePaths.push('/usr/local/lib/node_modules', '/usr/lib/node_modules')
+  }
+
   const globalSearchPaths = includeGlobal
     ? ECOSYSTEMS.flatMap((ecosystem) =>
-        ecosystem.globalPatterns.map((pattern) =>
-          normalizeGlob(path.join(home, pattern)),
+        ecosystem.globalPatterns.flatMap((pattern) =>
+          globalBasePaths.flatMap((base) => {
+            const paths = [normalizeGlob(path.join(base, pattern))]
+            if (base.toLowerCase().includes('node_modules')) {
+              paths.push(normalizeGlob(path.join(base, '*/', pattern)))
+            }
+            return paths
+          }),
         ),
       )
     : []
 
   const [repoFiles, globalFiles] = await Promise.all([
-    fg(repoSearchPaths, { absolute: true, ignore: ['**/node_modules/**'] }),
-    fg(globalSearchPaths, { absolute: true, ignore: ['**/node_modules/**'] }),
+    fg(repoSearchPaths, {
+      absolute: true,
+      ignore: ['**/node_modules/**', '**/README.md'],
+    }),
+    fg(globalSearchPaths, { absolute: true, ignore: ['**/README.md'] }),
   ])
 
   const nodes: ContentNode[] = []
