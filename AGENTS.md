@@ -1,52 +1,27 @@
 # AI Agent Portal
 
-Welcome to the AI Agent Press portal for this repository.
+Welcome to the AI Agent Press portal.
 
 ## Agents Summary
 
 - **Primary Agent**: Gemini CLI (System Orchestrator)
-- **Specialized Skills**:
-  - `skill-creator`: For extending CLI capabilities.
-  - `codebase_investigator`: For deep architectural analysis.
-  - `github-pr`: For automated, template-compliant PR creation using `gh`.
+- **Content Focus**:
+  - **Instructions**: Core behavioral mandates and system prompts.
+  - **Skills**: Specialized capabilities and automated workflows.
 
-## Ecosystems Detected
+## Content Organization
 
-- [x] Google Gemini
-- [x] Anthropic Claude
-- [x] Cursor Rules
-- [x] Custom `.agents/` and `AGENTS.md` (Agent)
-- [x] Custom `.codex/` and `CODEX.md` (Codex)
-- [x] OpenAI, Claude, Gemini, Cursor, Cline, Roo, and OpenClaw filter flags
-
-## Ecosystem Discovery
-
-- **OpenAI**: `OPENAI.md`, `.openai/`
-- **Agent**: `AGENTS.md`, `.agents/`
-- **Codex**: `CODEX.md`, `.codex/`
-- **Claude**: `CLAUDE.md`, `.claude/`
-- **Gemini**: `GEMINI.md`, `.gemini/`
-- **Cursor**: `.cursor/rules/`
-- **Cline**: `.cline/`, `.clinerules`
-- **Roo**: `.roo/`, `.roomodes`, `.roorules`
-- **OpenClaw**: `openclaw.json`, `openclaw.json5`, `.openclaw/`
+- **Nested Skills**: Skills are organized hierarchically to support complex capability sets.
+- **Flat Instructions**: Instructions are prioritized and kept at the root of their category for immediate access.
 
 ## Architecture Mandates
 
 - **Runtime**: Use `bun` for development and testing (`bun test`).
-- **Build**: Use `bun build` to generate a Node-executable ESM bundle (`dist/index.js`).
-- **Portal Configuration**: Always generate `config.js` for VitePress to ensure compatibility and avoid runtime TS overhead.
 - **Global Scanning**:
-  - Support `%APPDATA%/npm/node_modules` for Windows global package discovery.
-  - Support `/usr/local/lib/node_modules` and `/usr/lib/node_modules` for Unix global package discovery.
-  - Automatically include internal package agents (`../../.agents`) in the global scope.
-- **Sidebar Structure**: The sidebar MUST separate content into "Global" and "Current Repo" top-level sections IF both exist.
-  - **Scope Flattening**: If only one scope is active (e.g., via `--global` or if only one exists), the top-level scope layer MUST be omitted.
-  - **Ecosystem Flattening**: If only one ecosystem is active (e.g., via flags like `--gemini` or if only one exists), the ecosystem layer MUST be omitted.
-- **Hierarchy**: Sections -> Ecosystems -> Categories (Skills, Instructions, Agents).
-- **URL Pattern**: URLs MUST follow a hierarchical structure: `/{scope}/{ecosystem}/{category}/{name}`.
-- **Headless Mode**: The `list` command MUST output the exact same hierarchical structure as the portal sidebar.
-- **Global Loading**: Global and Repo instructions MUST be loaded simultaneously by default.
+  - Automatically include `~/projects/skills` in the global scope.
+- **Hierarchy**: Sections -> Agents -> Categories (Instructions, Skills).
+- **Nested Loading**: ONLY Skills support nested directory structures in the sidebar.
+- **Port**: The `-p` flag is optional (defaults to 5173).
 
 ## Current CLI Behavior
 
@@ -54,20 +29,20 @@ Welcome to the AI Agent Press portal for this repository.
 - `press preview [paths...]` starts the local documentation server for the current working directory or the provided paths.
 - `press build [paths...]` generates a static VitePress site and supports `--outDir`.
 - `press list` (Headless mode) emits a hierarchical JSON structure identical to the portal sidebar.
-- `press list --json` emits the normalized content graph, including parsed `metadata.ecosystemConfig` settings objects.
-- `press list --all --json` explicitly includes all supported ecosystems and scope/ecosystem layers.
+- `press list --json` emits the normalized content graph, including parsed `metadata.agentConfig` settings objects.
+- `press list --all --json` explicitly includes all supported agents and scope/agent layers.
 - **Scope Filtering**:
   - `press --global`: Shows only global configurations.
   - `press --repo`: Shows only repository configurations.
   - `press` (no flags): Shows both.
-- Ecosystem flags such as `--gemini`, `--claude`, `--cursor`, and `--openclaw` filter scan results and can be combined with scope flags.
-- **Hierarchical Sidebar**: Content is organized as Sections (Global/Repo) -> Ecosystems -> Categories (Instructions, Agents, Skills, Resources).
+- `-a, --agent <name>` filters scan results and can be combined with scope flags.
+- **Hierarchical Sidebar**: Content is organized as Sections (Global/Repo) -> Agents -> Categories (Instructions, Skills).
 - **Flattening Logic**:
   - The "Global/Repo" layer is omitted if only one scope is active.
-  - The "Ecosystem" layer is omitted if only one ecosystem is active.
-- **Hierarchical URLs**: Pages follow the `/{scope}/{ecosystem}/{category}/{name}` pattern.
+  - The "Agent" layer is omitted if only one agent is active.
+- **Hierarchical URLs**: Pages follow the `/{scope}/{agent}/{category}/{name}` pattern.
 - `GEMINI.md` is the preferred portal homepage; `AGENTS.md` is used as the fallback homepage when `GEMINI.md` is absent.
-- Preview/build output includes per-ecosystem review pages that group discovered files and parsed settings.
+- Preview/build output includes per-agent review pages that group discovered files and parsed settings.
 
 ## Development Standards
 

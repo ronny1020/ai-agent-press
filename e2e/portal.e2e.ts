@@ -56,14 +56,22 @@ test('sidebar shows global and repo sections when global files exist', async ({
   await page.goto('/')
   await expect(page.locator('.VPSidebar')).toBeVisible()
 
-  // In all mode, we should see both "Global" and "Current Repo" in the sidebar.
   const sidebar = page.locator('.VPSidebar')
-  const text = (await sidebar.textContent()) ?? ''
-  console.log('SIDEBAR TEXT:', text)
   await expect(sidebar).toContainText('Global')
   await expect(sidebar).toContainText('Current Repo')
+})
 
-  // Also verify that the global agent we created is present
-  // Wait, we didn't create a global agent inside the test.
-  // It relies on ~/.codex/AGENTS.md now.
+test('can navigate to a skill page', async ({ page }) => {
+  await page.goto('/')
+  
+  // Find a skill link in the sidebar. github-pr should be there.
+  const skillLink = page.getByRole('link', { name: 'github-pr' }).first()
+  await expect(skillLink).toBeVisible()
+  await skillLink.click()
+
+  // Verify the page content
+  await expect(page).toHaveURL(/.*github-pr/)
+  await expect(page.locator('.vp-doc h1')).toContainText('github-pr')
+  // It should contain something from the file
+  await expect(page.locator('.vp-doc')).toContainText('example skill', { ignoreCase: true })
 })

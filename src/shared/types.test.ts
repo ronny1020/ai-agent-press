@@ -5,8 +5,8 @@ describe('ContentNode', () => {
   it('should be able to create a node', () => {
     const node: ContentNode = {
       id: 'test',
-      ecosystem: 'claude',
-      type: 'agent',
+      agent: 'claude',
+      type: 'instruction',
       title: 'Test Agent',
       path: './test.md',
       content: '# Hello',

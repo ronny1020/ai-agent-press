@@ -46,20 +46,20 @@ Pass CLI props after the `press` script name:
 bun run press --help
 bun run press -- --help
 bun run press -- --all
-bun run press -- --gemini --cursor
+bun run press -- -a gemini,cursor
 bun run press -- ../other-repo
 bun run press preview -- --all
 bun run press build -- ./docs-repo --outDir .press/docs-repo
-bun run press list -- --openclaw --json
+bun run press list -- -a openclaw --json
 ```
 
 Common props:
 
-- `--all`: Include all ecosystems explicitly.
+- `--all`: Include all agents explicitly.
 - `--global`: Include global agent configuration directories.
 - `-p, --port <port>`: Choose the preview server port for `press` or `preview`.
 - `--json`: Format output as JSON (for `list` and `validate`).
-- `--openai`, `--claude`, `--gemini`, `--cursor`, `--codex`, `--cline`, `--roo`, `--aider`, `--openclaw`: Filter to matching ecosystems. Flags can be combined.
+- `-a, --agent <name>`: Filter to matching agents. Pass a comma-separated list or repeat the option.
 - `[paths...]`: Scan one or more project roots instead of the current working directory.
 - `--outDir <dir>`: Choose the static build output directory for `build`.
 
@@ -68,7 +68,7 @@ Playwright e2e tests can pass preview props through `PRESS_ARGS`:
 ```bash
 bun run test:e2e
 PRESS_ARGS=--all bun run test:e2e
-PRESS_ARGS="--gemini --cursor" bun run test:e2e
+PRESS_ARGS="-a gemini,cursor" bun run test:e2e
 ```
 
 ## Testing
@@ -102,8 +102,7 @@ If you are an AI agent contributing to this repository:
 ## Architecture Overview
 
 - `src/cli/`: Command-line interface definitions using `cac`.
-- `src/core/`: Core logic for ecosystem detection and content normalization.
-- `src/adapters/`: Handlers for different AI ecosystem file formats.
+- `src/core/`: Core logic for agent detection and content normalization.
 - `src/renderer/`: Logic to transform the content graph into a VitePress site.
 - `src/vitepress/`: Shared VitePress configuration and virtual site structure.
 

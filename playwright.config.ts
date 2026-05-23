@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PRESS_ARGS = process.env.PRESS_ARGS ?? ''
+const PRESS_ARGS = process.env.PRESS_ARGS ?? '--all'
 const TIMEOUT_MS = 15_000
 const RETRIES_CI = 2
 const RETRIES_LOCAL = 0
@@ -17,7 +17,7 @@ export default defineConfig({
   ],
   reporter: 'list',
   retries: process.env.CI ? RETRIES_CI : RETRIES_LOCAL,
-  testDir: './src',
+  testDir: './e2e',
   testMatch: '**/*.e2e.ts',
   timeout: TIMEOUT_MS,
   use: {
@@ -25,7 +25,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `bun run src/cli/index.ts preview ${PRESS_ARGS}`.trim(),
+    command: `bun run src/cli/index.ts preview ${PRESS_ARGS} -p 5173`.trim(),
     reuseExistingServer: !process.env.CI,
     stderr: 'pipe',
     stdout: 'pipe',

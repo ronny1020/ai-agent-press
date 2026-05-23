@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { prepareTemporaryDirectory, getBaseTemporaryDirectory } from './vitepress'
 import type { ContentNode } from '../shared/types'
+
+process.env.AI_AGENT_PRESS_CACHE_DIR = path.join(
+  tmpdir(),
+  'ai-agent-press-vitepress-tests',
+)
 
 describe('VitePress renderer', () => {
   const temporaryDirectory = path.join(getBaseTemporaryDirectory(), 'temp')
@@ -16,8 +22,6 @@ describe('VitePress renderer', () => {
   })
 
   it('should use AGENTS.md as the index when GEMINI.md is absent', async () => {
-    // ...
-
     const root = process.cwd().replaceAll('\\', '/')
     await prepareTemporaryDirectory([
       createNode({
@@ -44,25 +48,25 @@ describe('VitePress renderer', () => {
         path: `${root}/repo/.claude/foo.md`,
         title: 'Claude Foo',
         content: '# Claude Foo',
-        ecosystem: 'claude',
+        agent: 'claude',
       }),
       createNode({
         path: `${root}/repo/.openai/foo.md`,
         title: 'OpenAI Foo',
         content: '# OpenAI Foo',
-        ecosystem: 'openai',
+        agent: 'openai',
       }),
     ])
 
     await expect(
       readFile(
-        path.join(temporaryDirectory, 'repo/claude/agents/foo.md'),
+        path.join(temporaryDirectory, 'repo/claude/instructions/foo.md'),
         'utf8',
       ),
     ).resolves.toContain('# Claude Foo')
     await expect(
       readFile(
-        path.join(temporaryDirectory, 'repo/openai/agents/foo.md'),
+        path.join(temporaryDirectory, 'repo/openai/instructions/foo.md'),
         'utf8',
       ),
     ).resolves.toContain('# OpenAI Foo')
@@ -91,24 +95,19 @@ describe('VitePress renderer', () => {
     expect(config).toContain('"lineNumbers": true') // markdown line numbers
   })
 
-  it('should include agents, skills, and rules in current mode (default)', async () => {
+  it('should include instructions and skills in current mode (default)', async () => {
     const root = process.cwd().replaceAll('\\', '/')
     await prepareTemporaryDirectory(
       [
         createNode({
           path: `${root}/repo/agent.md`,
-          type: 'agent',
-          title: 'Agent',
+          type: 'instruction',
+          title: 'Instruction',
         }),
         createNode({
           path: `${root}/repo/skill.md`,
           type: 'skill',
           title: 'Skill',
-        }),
-        createNode({
-          path: `${root}/repo/workflow.json`,
-          type: 'workflow',
-          title: 'Workflow',
         }),
       ],
       { isAllMode: false },
@@ -118,9 +117,8 @@ describe('VitePress renderer', () => {
       path.join(temporaryDirectory, '.vitepress', 'config.js'),
       'utf8',
     )
-    expect(config).toContain('Agent')
+    expect(config).toContain('Instruction')
     expect(config).toContain('Skill')
-    expect(config).not.toContain('Workflow')
   })
 
   it('should include instruction nodes (AGENTS.md/GEMINI.md) in the sidebar', async () => {
@@ -136,13 +134,13 @@ describe('VitePress renderer', () => {
           path: `${root}/repo/AGENTS.md`,
           type: 'instruction',
           title: 'Agent Instructions',
-          ecosystem: 'agent',
+          agent: 'agent',
         }),
         createNode({
           path: `${root}/repo/CODEX.md`,
           type: 'instruction',
           title: 'Codex Instructions',
-          ecosystem: 'codex',
+          agent: 'codex',
         }),
       ],
       { isAllMode: false },
@@ -163,8 +161,8 @@ function createNode(overrides: Partial<ContentNode>): ContentNode {
   const defaultPath = `${root}/repo/GEMINI.md`
   return {
     id: overrides.path ?? defaultPath,
-    ecosystem: 'gemini',
-    type: 'agent',
+    agent: 'gemini',
+    type: 'instruction',
     scope: 'repo',
     title: 'Test',
     path: overrides.path ?? defaultPath,

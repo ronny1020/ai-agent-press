@@ -59,7 +59,7 @@ describe('myFunction', () => {
 
 ### Integration Tests
 
-Integration tests for the CLI and ecosystem adapters should verify that multiple components work together. For these, we often use temporary directories to simulate real repository structures.
+Integration tests for the CLI and agent adapters should verify that multiple components work together. For these, we often use temporary directories to simulate real repository structures.
 
 ## 🛠 Mocking & Utilities
 

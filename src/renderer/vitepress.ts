@@ -7,11 +7,7 @@ import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
 import { build as vitepressBuild, createServer } from 'vitepress'
-import {
-  buildSidebarItems,
-  splitNodesByScope,
-  consolidateSidebar,
-} from '../core/sidebar'
+import { computeSidebar, pickIndexNode } from '../core/sidebar'
 
 export interface RenderOptions {
   isAllMode?: boolean
@@ -49,22 +45,9 @@ export async function prepareTemporaryDirectory(
 ): Promise<string> {
   const { isAllMode = false } = options
 
-  // "it should only have agent in current mode"
-  const indexNode = pickIndexNode(nodes)
-  const activeNodes = (
-    isAllMode
-      ? nodes
-      : nodes.filter(
-          (n) =>
-            n.type === 'agent' ||
-            n.type === 'skill' ||
-            n.type === 'rule' ||
-            n.type === 'instruction' ||
-            n === indexNode,
-        )
-  ).filter((n) => {
+  // Filter nodes that break build or are irrelevant
+  const filteredNodes = nodes.filter((n) => {
     const b = path.basename(n.path).toLowerCase()
-    // Exclude large cache/system files that break VitePress build
     return (
       !b.includes('cache') &&
       !b.includes('auth.json') &&
@@ -72,6 +55,20 @@ export async function prepareTemporaryDirectory(
       !b.includes('.lock')
     )
   })
+
+  // Compute common sidebar and link structure
+  const activeNodes = (
+    isAllMode
+      ? filteredNodes
+      : filteredNodes.filter(
+          (n) =>
+            n.type === 'skill' ||
+            n.type === 'instruction' ||
+            n === pickIndexNode(filteredNodes),
+        )
+  )
+
+  const { sidebar, nodeToLink } = computeSidebar(activeNodes, { isAllMode })
 
   const baseTemporaryDirectory = getBaseTemporaryDirectory()
   const temporaryDirectory = path.join(baseTemporaryDirectory, 'temp')
@@ -99,114 +96,96 @@ export async function prepareTemporaryDirectory(
     console.warn('Could not symlink node_modules to temp directory:', error)
   }
 
-  const usedPageIds = new Set<string>()
-  const nodeToLink = new Map<ContentNode, string>()
-
-  for (const node of activeNodes) {
-    const link =
-      node === indexNode ? '/' : `/${createPageId(node, usedPageIds)}`
-    nodeToLink.set(node, link)
-  }
-
   // Write files with rewritten links
   for (const node of activeNodes) {
-    const link = nodeToLink.get(node)!
-    const targetPath =
-      link === '/'
-        ? path.join(temporaryDirectory, 'index.md')
-        : path.join(temporaryDirectory, `${link.slice(1)}.md`)
+    try {
+      const link = nodeToLink.get(node)!
+      const targetPath =
+        link === '/'
+          ? path.join(temporaryDirectory, 'index.md')
+          : path.join(temporaryDirectory, `${link.slice(1)}.md`)
 
-    let content = node.content
+      let content = node.content
 
-    // Rewrite relative links: [text](./other.md) -> [text](/slug)
-    content = content.replaceAll(
-      /(\[.*?\]|!\[.*?\])\((.*?)\)/g,
-      (match, prefix, url) => {
-        if (
-          url.startsWith('http') ||
-          url.startsWith('/') ||
-          url.startsWith('#')
-        )
-          return match
+      // Rewrite relative links: [text](./other.md) -> [text](/slug)
+      content = content.replaceAll(
+        /(\[.*?\]|!\[.*?\])\((.*?)\)/g,
+        (match, prefix, url) => {
+          if (
+            url.startsWith('http') ||
+            url.startsWith('/') ||
+            url.startsWith('#')
+          )
+            return match
 
-        const absoluteUrlPath = path.join(path.dirname(node.path), url)
-        const targetNode = nodes.find((n) => n.path === absoluteUrlPath)
+          const absoluteUrlPath = path.join(path.dirname(node.path), url)
+          const targetNode = nodes.find((n) => n.path === absoluteUrlPath)
 
-        if (targetNode) {
-          const targetLink = nodeToLink.get(targetNode)
-          if (targetLink) {
-            return `${prefix}(${targetLink})`
+          if (targetNode) {
+            const targetLink = nodeToLink.get(targetNode)
+            if (targetLink) {
+              return `${prefix}(${targetLink})`
+            }
           }
-        }
-        return match
-      },
-    )
-
-    await mkdir(path.dirname(targetPath), { recursive: true })
-
-    const isMarkdown = path.extname(node.path).toLowerCase() === '.md'
-    let finalBody: string
-
-    if (isMarkdown) {
-      finalBody = content
-    } else {
-      const extension = path.extname(node.path).slice(1) || 'text'
-      finalBody = `\n\n\`\`\`${extension}\n${content}\n\`\`\`\n\n`
-    }
-
-    // Escape Vue delimiters to prevent compilation errors
-    finalBody = finalBody
-      .replaceAll('{{', '&#123;&#123;')
-      .replaceAll('}}', '&#125;&#125;')
-
-    // Only wrap in v-pre if it's markdown and likely to have Vue-breaking content
-    const wrapVPre =
-      isMarkdown && (content.includes('<') || content.includes('{'))
-
-    if (wrapVPre) {
-      // Try to preserve H1 by putting it outside v-pre if possible
-      let header = ''
-      let bodyToWrap = finalBody
-
-      const h1Match = finalBody.match(/^#\s+(.*)$/m)
-      if (h1Match) {
-        header = h1Match[0]
-        bodyToWrap = finalBody.slice(h1Match.index! + header.length)
-      }
-
-      await writeFile(
-        targetPath,
-        `${header}\n\n<div v-pre>\n\n${bodyToWrap}\n\n</div>\n`,
+          return match
+        },
       )
-    } else {
-      // For non-markdown files, we still want a title
-      let header = ''
-      if (!isMarkdown) {
-        header = `# ${node.title}\n\n`
+
+      await mkdir(path.dirname(targetPath), { recursive: true })
+
+      const isMarkdown = path.extname(node.path).toLowerCase() === '.md'
+      let finalBody: string
+
+      if (isMarkdown) {
+        finalBody = content
+      } else {
+        const extension = path.extname(node.path).slice(1) || 'text'
+        finalBody = `\n\n\`\`\`${extension}\n${content}\n\`\`\`\n\n`
       }
-      await writeFile(targetPath, `${header}${finalBody}`)
+
+      // Escape Vue delimiters to prevent compilation errors
+      finalBody = finalBody
+        .replaceAll('{{', '&#123;&#123;')
+        .replaceAll('}}', '&#125;&#125;')
+
+      // Only wrap in v-pre if it's markdown and likely to have Vue-breaking content
+      const wrapVPre =
+        isMarkdown && (content.includes('<') || content.includes('{'))
+
+      if (wrapVPre) {
+        // Try to preserve H1 by putting it outside v-pre if possible
+        let header = ''
+        let bodyToWrap = finalBody
+
+        const h1Match = finalBody.match(/^#\s+(.*)$/m)
+        if (h1Match) {
+          header = h1Match[0]
+          bodyToWrap = finalBody.slice(h1Match.index! + header.length)
+        }
+
+        await writeFile(
+          targetPath,
+          `${header}\n\n<div v-pre>\n\n${bodyToWrap}\n\n</div>\n`,
+        )
+      } else {
+        // For non-markdown files, we still want a title
+        let header = ''
+        if (!isMarkdown) {
+          header = `# ${node.title}\n\n`
+        }
+        await writeFile(targetPath, `${header}${finalBody}`)
+      }
+    } catch (error) {
+      console.warn(`Failed to process file for VitePress: ${node.path}`, error)
     }
   }
 
-  const { repoNodes, globalNodes } = splitNodesByScope(activeNodes)
+  const repoNodes = activeNodes.filter((n) => n.scope === 'repo')
+  const globalNodes = activeNodes.filter((n) => n.scope === 'global')
+  const globalSidebarItems = sidebar.find(s => s.text === 'Global')?.items || []
+  const repoSidebarItems = sidebar.find(s => s.text === 'Current Repo')?.items || (globalSidebarItems.length === 0 ? sidebar : [])
 
-  const repoSidebarItems = buildSidebarItems(
-    repoNodes,
-    'repo',
-    (n) => nodeToLink.get(n)!,
-  )
-  const globalSidebarItems = buildSidebarItems(
-    globalNodes,
-    'global',
-    (n) => nodeToLink.get(n)!,
-  )
-
-  const sidebar = consolidateSidebar(
-    repoSidebarItems,
-    globalSidebarItems,
-    isAllMode,
-  )
-  const shouldSplit = isAllMode || globalSidebarItems.length > 0
+  const shouldSplit = isAllMode || globalNodes.length > 0
 
   const findFirstLink = (items: SidebarItem[]): string | undefined => {
     for (const item of items) {
@@ -222,10 +201,10 @@ export async function prepareTemporaryDirectory(
   // Build top nav
   const nav = shouldSplit
     ? [
-        ...(globalSidebarItems.length > 0
+        ...(globalNodes.length > 0
           ? [{ text: 'Global', link: findFirstLink(globalSidebarItems) || '/' }]
           : []),
-        ...(repoSidebarItems.length > 0
+        ...(repoNodes.length > 0
           ? [
               {
                 text: 'Current Repo',
@@ -321,23 +300,11 @@ export async function prepareTemporaryDirectory(
   return temporaryDirectory
 }
 
-function pickIndexNode(nodes: ContentNode[]): ContentNode | undefined {
-  const repoNodes = nodes.filter((n) => n.scope === 'repo')
-
-  // Prefer instruction nodes in the root
-  const priorities = ['GEMINI.MD', 'AGENTS.MD']
-
-  for (const priority of priorities) {
-    const found = repoNodes.find(
-      (n) => path.basename(n.path).toUpperCase() === priority,
-    )
-    if (found) return found
+export function getBaseTemporaryDirectory(): string {
+  if (process.env.AI_AGENT_PRESS_CACHE_DIR) {
+    return process.env.AI_AGENT_PRESS_CACHE_DIR
   }
 
-  return repoNodes[0] || nodes[0]
-}
-
-export function getBaseTemporaryDirectory(): string {
   if (process.platform === 'win32') {
     return path.join(
       process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'),
@@ -352,61 +319,5 @@ export function getBaseTemporaryDirectory(): string {
   return (
     process.env.XDG_CACHE_HOME ||
     path.join(homedir(), '.cache', 'ai-agent-press')
-  )
-}
-
-function createPageId(node: ContentNode, usedPageIds: Set<string>): string {
-  // Mapping internal types to URL category names
-  const categoryMap: Record<string, string> = {
-    agent: 'agents',
-    skill: 'skills',
-    rule: 'skills',
-    instruction: 'instructions',
-    workflow: 'resources',
-  }
-  const category = categoryMap[node.type] || node.type
-
-  // Try to find the category folder in the path to get nesting
-  // e.g., /path/to/.agents/skills/nested/tool.sh -> nested/tool
-  const normalizedPath = node.path.replaceAll('\\', '/')
-  const searchString = `/${category}/`
-  const lastIndex = normalizedPath.lastIndexOf(searchString)
-
-  const relativeParts: string[] = []
-  if (lastIndex !== -1) {
-    const afterCategory = normalizedPath.slice(lastIndex + searchString.length)
-    const segments = afterCategory.split('/')
-    if (segments.length > 1) {
-      relativeParts.push(...segments.slice(0, -1).map((p) => slugify(p)))
-    }
-  }
-
-  const stem = path.basename(node.path, path.extname(node.path))
-  const parts = [
-    slugify(node.scope || 'unknown'),
-    slugify(node.ecosystem || 'unknown'),
-    slugify(category || 'unknown'),
-    ...relativeParts,
-    slugify(stem || 'unknown'),
-  ]
-  const prefix = parts.join('/')
-  let pageId = prefix
-  let suffix = 2
-
-  while (usedPageIds.has(pageId)) {
-    pageId = `${prefix}-${suffix}`
-    suffix += 1
-  }
-
-  usedPageIds.add(pageId)
-  return pageId
-}
-
-function slugify(value: string): string {
-  return (
-    value
-      .toLowerCase()
-      .replaceAll(/[^a-z0-9]+/g, '-')
-      .replaceAll(/^-+|-+$/g, '') || 'page'
   )
 }

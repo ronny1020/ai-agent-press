@@ -1,8 +1,14 @@
 import { describe, it, expect, afterEach } from 'bun:test'
 import path from 'node:path'
+import { tmpdir } from 'node:os'
 import { readFile, rm } from 'node:fs/promises'
 import { prepareTemporaryDirectory } from './vitepress'
 import type { ContentNode } from '../shared/types'
+
+process.env.AI_AGENT_PRESS_CACHE_DIR = path.join(
+  tmpdir(),
+  'ai-agent-press-assets-tests',
+)
 
 describe('Universal Asset Support', () => {
   const root = process.cwd().replaceAll('\\', '/')
@@ -10,8 +16,8 @@ describe('Universal Asset Support', () => {
 
   const createNode = (overrides: Partial<ContentNode>): ContentNode => ({
     id: overrides.path ?? `${root}/repo/test.md`,
-    ecosystem: 'gemini',
-    type: 'agent',
+    agent: 'gemini',
+    type: 'instruction',
     scope: 'repo',
     title: 'Test',
     path: overrides.path ?? `${root}/repo/test.md`,

@@ -1,0 +1,39 @@
+name: "Copilot Setup Steps"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Bun runtime
+        run: |
+          curl -fsSL https://bun.sh/install | bash -s -- --yes
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install project dependencies
+        run: bun install
+
+      - name: (optional) verify install
+        run: |
+          bun --version || true
+          node --version || true
