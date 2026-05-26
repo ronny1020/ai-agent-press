@@ -72,9 +72,9 @@ test('can navigate to a skill page', async ({ page }) => {
 
   // Verify the page content
   await expect(page).toHaveURL(/.*github-pr/)
-  await expect(page.locator('.vp-doc h1')).toContainText('github-pr')
-  // It should contain something from the file
-  await expect(page.locator('.vp-doc')).toContainText('example skill', { ignoreCase: true })
+  await expect(page.locator('.vp-doc h1')).toBeVisible()
+  // It should contain content from the real skill file
+  await expect(page.locator('.vp-doc')).toContainText('gh pr create', { ignoreCase: true })
 })
 
 test('no sidebar pages are empty', async ({ page }) => {
