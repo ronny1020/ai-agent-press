@@ -17,7 +17,7 @@ These are foundational mandates for any AI agent operating in this repository.
 - **Nested Loading**:
   - **Skills**: MUST support nested directory structures in the sidebar.
   - **Instructions**: MUST NOT support nesting; all instruction files MUST be flattened at the root of the "Instructions" category.
-- **External Skills**: The scanner MUST automatically include `~/projects/skills` (resolved via homedir) in the global scope.
+- **External Skills**: Set `PRESS_EXTRA_SKILLS_PATH=~/projects/skills` to include an extra skills directory in the global scope (tilde-expanded, resolved via homedir).
 - **Global Claude Skills**: `~/.claude/skills/**` MUST be scanned and included in the global scope under the `claude` agent.
 - **Port**: The `-p` flag is optional (default 5173).
 - **Sidebar Structure**: The sidebar MUST separate content into "Global" and "Current Repo" top-level sections IF both exist.
@@ -74,6 +74,10 @@ These are foundational mandates for any AI agent operating in this repository.
 ### Commit Style
 
 - **Conventional Commits**: All contributions must use the `feat(xxx):`, `fix(xxx):` etc. format.
+
+### TypeScript Standards
+
+- **No double-cast escape hatches**: NEVER use `as unknown as X` or `as any as X`. Use intersection types (`as T & { extra?: Prop }`) or type guards to extend known types safely.
 
 ### AI Agent Protocols
 

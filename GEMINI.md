@@ -9,7 +9,7 @@ These instructions are foundational mandates for any AI agent operating in this 
 - **Nested Loading**:
   - **Skills**: MUST support nested directory structures in the sidebar.
   - **Instructions**: MUST NOT support nesting; all instruction files MUST be flattened at the root of the "Instructions" category.
-- **External Skills**: The scanner MUST automatically include `~/projects/skills` (resolved via homedir) in the global scope.
+- **External Skills**: Set `PRESS_EXTRA_SKILLS_PATH=~/projects/skills` to include an extra skills directory in the global scope (opt-in via env var, tilde-expanded).
 - **Port**: The `-p` flag is optional (default 5173).
 - **Sidebar Structure**: The sidebar MUST separate content into "Global" and "Current Repo" top-level sections IF both exist.
   - **Scope Flattening**: If only one scope is active, the top-level scope layer MUST be omitted.

@@ -33,7 +33,14 @@ export default tseslint.config(
       'unicorn/prevent-abbreviations': [
         'error',
         {
-          ignore: ['e2e'],
+          ignore: [
+            'e2e',
+            // Node.js built-in API names that cannot be renamed
+            'homedir',
+            'dirname',
+            '__dirname',
+            '__filename',
+          ],
         },
       ],
     },

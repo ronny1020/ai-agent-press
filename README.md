@@ -8,7 +8,7 @@ Turn your AI-agent instruction files and skill directories into a unified develo
 
 - **Instruction & Skill Focus**: Strictly organized into Instructions and Skills.
 - **Nested Skills**: Supports hierarchical organization for skills, while keeping instructions flat.
-- **Global-first**: Loads local repo, global home (`~/.claude/skills/`, `~/.gemini/`, etc.), and external `~/projects/skills` automatically.
+- **Global-first**: Loads local repo and global home (`~/.claude/skills/`, `~/.gemini/`, etc.) automatically.
 - **Cross-runtime**: Fully compatible with Node.js 20+ and Bun.
 - **Smart Content Filtering**: Excludes binary image files (PNG/JPG/GIF/WEBP) and hidden organizational directories (dot-prefixed like `.system`) from navigation and URLs.
 - **Clean Navigation**: Empty sidebar sections are automatically pruned; pages that fail to render are skipped gracefully.
@@ -46,8 +46,16 @@ press list --json
 
 1.  **Current Repository**: Scans for agent-specific files and the `.agents/` directory.
 2.  **Global Home**: Scans `~/.agents/` and other agent hidden folders.
-3.  **External Skills**: Automatically includes `~/projects/skills` for cross-project agent capabilities.
+3.  **Extra Skills** _(opt-in)_: Set `PRESS_EXTRA_SKILLS_PATH=~/projects/skills` to include an additional skills directory in the global scope.
 4.  **Internal Agents**: Includes the tool's own built-in instructions.
+
+### Environment Variables
+
+| Variable                        | Description                                                               |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `PRESS_EXTRA_SKILLS_PATH`       | Path to an extra skills directory added to global scope (tilde-expanded). |
+| `AI_AGENT_PRESS_CACHE_DIR`      | Override the default VitePress cache directory location.                  |
+| `INCLUDE_GLOBAL_NODE_MODULES=1` | Also scan global `node_modules` for agent packages.                       |
 
 ### Hierarchy & Navigation
 

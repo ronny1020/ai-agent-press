@@ -2,6 +2,7 @@
 import path from 'node:path'
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { cac } from 'cac'
 import { version } from '../../package.json'
 
@@ -233,6 +234,13 @@ export function createCli() {
   return cli
 }
 
-if (import.meta.main) {
+// import.meta.main is Bun-only (undefined in Node.js < 22).
+// Fall back to the standard ESM entry-point check for Node.js compatibility.
+// Bun exposes import.meta.main; Node.js does not. Use an intersection to avoid double-casting.
+const _isMain =
+  (import.meta as ImportMeta & { main?: boolean }).main ??
+  process.argv[1] === fileURLToPath(import.meta.url)
+
+if (_isMain) {
   createCli().parse()
 }

@@ -1,5 +1,6 @@
 import path from 'node:path'
 import fg from 'fast-glob'
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -22,10 +23,15 @@ export interface ScanOptions {
 function getInternalAgentsPath(): string {
   try {
     const __filename = fileURLToPath(import.meta.url)
-    const __dirname = path.dirname(__filename)
-    // Check if we're in dist/ or src/core/
-    const isDistribution = __dirname.endsWith('dist') || __dirname.includes('dist/')
-    return path.resolve(__dirname, isDistribution ? '..' : '../..')
+    // Walk up until we find package.json — works from both dist/ and src/core/
+    let directory = path.dirname(__filename)
+    for (let index = 0; index < 4; index++) {
+      if (existsSync(path.join(directory, 'package.json'))) return directory
+      const parent = path.dirname(directory)
+      if (parent === directory) break
+      directory = parent
+    }
+    return ''
   } catch {
     return ''
   }
@@ -75,11 +81,7 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
 
   const ignorePatterns = [
     '**/node_modules/**',
-    '**/README.md',
     '**/.git/**',
-    '**/dist/**',
-    '**/build/**',
-    '**/target/**',
     '**/.cache/**',
     // Temporary tool outputs and metadata
     '**/*.metadata',
@@ -92,15 +94,12 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
     '**/tool-outputs/**',
     '**/playwright-report/**',
     '**/test-results/**',
-    '**/history/**',
     '**/.app/**',
     '**/.mcp/**',
     '**/plugin.lock',
     '**/*.orig',
     '**/*.bak',
     '**/.system_generated/**',
-    '**/logs/**',
-    '**/log/**',
   ]
 
   const nodes: ContentNode[] = []
@@ -128,17 +127,10 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
 
       if (!agentDefinition) return // Skip files that don't match any known agent
 
-      if (process.env.DEBUG_SCANNER) {
-        console.log(`DEBUG: processing ${file} for agent ${agentDefinition.id}`)
-      }
-
       if (agents?.length && !agents.includes(agentDefinition.id))
         return
 
       const type = detectNodeType(file, agentDefinition)
-      if (process.env.DEBUG_SCANNER) {
-        console.log(`DEBUG: detected type for ${file}: ${type}`)
-      }
 
       if (!type) return // Ignore files that don't match any node type
 
