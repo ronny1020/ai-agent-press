@@ -43,6 +43,7 @@ src/
 ## 📝 Writing Tests
 
 ### Unit Tests
+
 Unit tests should focus on individual functions or classes. Mock external dependencies (like the filesystem) whenever possible to keep tests fast and deterministic.
 
 ```typescript
@@ -57,11 +58,13 @@ describe('myFunction', () => {
 ```
 
 ### Integration Tests
-Integration tests for the CLI and ecosystem adapters should verify that multiple components work together. For these, we often use temporary directories to simulate real repository structures.
+
+Integration tests for the CLI and agent adapters should verify that multiple components work together. For these, we often use temporary directories to simulate real repository structures.
 
 ## 🛠 Mocking & Utilities
 
 Since `ai-agent-press` interacts heavily with the filesystem:
+
 - Use `memfs` or temporary directories for filesystem-dependent tests.
 - Mock `fast-glob` results when testing scanner logic.
 

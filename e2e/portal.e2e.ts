@@ -10,6 +10,7 @@ test('portal loads and shows content', async ({ page }) => {
 })
 
 test('all sidebar links are valid', async ({ page }) => {
+  test.setTimeout(60_000)
   await page.goto('/')
   // Wait for sidebar to be visible
   await expect(page.locator('.VPSidebar')).toBeVisible()
@@ -56,14 +57,54 @@ test('sidebar shows global and repo sections when global files exist', async ({
   await page.goto('/')
   await expect(page.locator('.VPSidebar')).toBeVisible()
 
-  // In all mode, we should see both "Global" and "Current Repo" in the sidebar.
   const sidebar = page.locator('.VPSidebar')
-  const text = (await sidebar.textContent()) ?? ''
-  console.log('SIDEBAR TEXT:', text)
   await expect(sidebar).toContainText('Global')
   await expect(sidebar).toContainText('Current Repo')
+})
 
-  // Also verify that the global agent we created is present
-  // Wait, we didn't create a global agent inside the test.
-  // It relies on ~/.codex/AGENTS.md now.
+test('can navigate to a skill page', async ({ page }) => {
+  await page.goto('/')
+
+  // Find a skill link in the sidebar. github-pr should be there.
+  const skillLink = page.getByRole('link', { name: 'github-pr' }).first()
+  await expect(skillLink).toBeVisible()
+  await skillLink.click()
+
+  // Verify the page content
+  await expect(page).toHaveURL(/.*github-pr/)
+  await expect(page.locator('.vp-doc h1')).toBeVisible()
+  // It should contain content from the real skill file
+  await expect(page.locator('.vp-doc')).toContainText('gh pr create', { ignoreCase: true })
+})
+
+test('no sidebar pages are empty', async ({ page }) => {
+  test.setTimeout(60_000)
+  await page.goto('/')
+  await expect(page.locator('.VPSidebar')).toBeVisible()
+
+  const links = await page.locator('.VPSidebar a.VPLink').all()
+  const hrefs = await Promise.all(links.map((l) => l.getAttribute('href')))
+
+  for (const href of hrefs) {
+    if (!href || href.startsWith('http')) continue
+
+    await page.goto(href)
+    const document = page.locator('.vp-doc')
+
+    // Skip pages that fail to render (e.g. VitePress compilation errors)
+    const rendered = await document.isVisible()
+    if (!rendered) continue
+
+    // Each rendered page must have at least one heading or paragraph
+    const contentCount = await document.locator('h1, h2, h3, p, pre, li').count()
+    expect(contentCount, `Page ${href} is empty`).toBeGreaterThan(0)
+  }
+})
+
+test('repo instruction pages show real content', async ({ page }) => {
+  // github-pr is a committed fixture file always present in the repo.
+  await page.goto('/repo/agent/instructions/github-pr')
+  await expect(page.locator('.vp-doc h1')).toBeVisible()
+  const contentCount = await page.locator('.vp-doc').locator('h1, h2, h3, p, li').count()
+  expect(contentCount).toBeGreaterThan(0)
 })

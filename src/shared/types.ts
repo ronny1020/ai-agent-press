@@ -1,4 +1,4 @@
-export type Ecosystem =
+export type Agent =
   | 'openai'
   | 'claude'
   | 'gemini'
@@ -9,18 +9,53 @@ export type Ecosystem =
   | 'roo'
   | 'openclaw'
   | 'aider'
+  | 'antigravity'
+  | 'aider-desk'
+  | 'augment'
+  | 'bob'
+  | 'codearts-agent'
+  | 'codebuddy'
+  | 'codemaker'
+  | 'codestudio'
+  | 'command-code'
+  | 'continue'
+  | 'cortex'
+  | 'crush'
+  | 'devin'
+  | 'droid'
+  | 'forgecode'
+  | 'github-copilot'
+  | 'goose'
+  | 'hermes-agent'
+  | 'iflow-cli'
+  | 'junie'
+  | 'kilo'
+  | 'kimi-cli'
+  | 'kiro-cli'
+  | 'kode'
+  | 'mcpjam'
+  | 'mistral-vibe'
+  | 'mux'
+  | 'neovate'
+  | 'openhands'
+  | 'pi'
+  | 'qoder'
+  | 'qwen-code'
+  | 'rovodev'
+  | 'tabnine-cli'
+  | 'trae'
+  | 'windsurf'
+  | 'zencoder'
+  | 'pochi'
+  | 'adal'
 
 export type NodeType =
-  | 'agent'
   | 'skill'
   | 'instruction'
-  | 'workflow'
-  | 'rule'
-  | 'prompt'
 
 export interface ContentNode {
   id: string
-  ecosystem: Ecosystem
+  agent: Agent
   type: NodeType
   scope?: 'repo' | 'global'
   title: string

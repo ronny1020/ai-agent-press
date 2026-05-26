@@ -1,102 +1,137 @@
 # ai-agent-press 🚀
 
-**ai-agent-press** is a zero-config, **Bun-powered** CLI tool that transforms AI agent ecosystem files into searchable documentation portals and structured content graphs.
+**ai-agent-press** is a zero-config, **high-performance** CLI tool that transforms AI agent configuration files into searchable documentation portals and structured content graphs.
 
-Turn your AI-agent instruction files and config directories into a unified developer portal or a hierarchical JSON stream in seconds.
+Turn your AI-agent instruction files and skill directories into a unified developer portal or a hierarchical JSON stream in seconds. Built for the modern JavaScript ecosystem, it runs anywhere **Node.js 20+** or **Bun** is available.
 
 ## ✨ Features
 
-- **Filesystem-first**: Scans your repo for AI-agent-related files automatically.
-- **Bun-powered**: Native speed and built-in testing with `bun test`.
-- **Hierarchical Navigation**: Strictly organized sidebar and URLs (`/{scope}/{ecosystem}/{category}/{name}`).
-- **Smart Flattening**: Automatically simplifies the sidebar structure when only one scope or ecosystem is present.
-- **Headless Mode**: List agent configurations as a hierarchical JSON tree that matches the portal sidebar.
-- **Zero-config**: No manual VitePress scaffolding or repo pollution.
-- **Ecosystem-aware**: Supports OpenAI, Claude, Gemini, Cursor, Agent, Codex, Cline, Roo, and OpenClaw.
-- **Global-first**: Simultaneously loads local repo and global (`~/.agents`, etc.) instructions by default.
+- **Instruction & Skill Focus**: Strictly organized into Instructions and Skills.
+- **Nested Skills**: Supports hierarchical organization for skills, while keeping instructions flat.
+- **Global-first**: Loads local repo and global home (`~/.claude/skills/`, `~/.gemini/`, etc.) automatically.
+- **Cross-runtime**: Fully compatible with Node.js 20+ and Bun.
+- **Smart Content Filtering**: Excludes binary image files (PNG/JPG/GIF/WEBP) and hidden organizational directories (dot-prefixed like `.system`) from navigation and URLs.
+- **Clean Navigation**: Empty sidebar sections are automatically pruned; pages that fail to render are skipped gracefully.
 
 ## 🚀 Quick Start
 
 ### Installation
+
 ```bash
-bun add -g ai-agent-press
+# Using Bun (Recommended)
+bun install -g ai-agent-press
+
+# Using NPM
+npm install -g ai-agent-press
 ```
 
 ### Usage
+
 ```bash
-# Start a documentation portal (default preview mode)
-press
+# Start a documentation portal on port 5173
+press -p 5173
 
-# Preview a specific project or multiple roots
-press ../my-project -p 3000
-press preview ./repo-a ./repo-b --port 5000
-
-# Build a static documentation site (output to .press/dist)
-press build
-press build ./repo-a --outDir .press/repo-a
+# Preview a specific project
+press ./my-project -p 3000
 
 # Headless: List all discovered agents as a hierarchical JSON tree
 press list --json
-
-# Filter to one or more ecosystems
-press list --claude --json
-press preview --gemini --cursor
-press list --all --json
 ```
+
+## 🏗 Architecture
+
+### Multi-tiered Scanning
+
+**ai-agent-press** employs a robust discovery strategy:
+
+1.  **Current Repository**: Scans for agent-specific files and the `.agents/` directory.
+2.  **Global Home**: Scans `~/.agents/` and other agent hidden folders.
+3.  **Extra Skills** _(opt-in)_: Set `PRESS_EXTRA_SKILLS_PATH=~/projects/skills` to include an additional skills directory in the global scope.
+4.  **Internal Agents**: Includes the tool's own built-in instructions.
+
+### Environment Variables
+
+| Variable                        | Description                                                               |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `PRESS_EXTRA_SKILLS_PATH`       | Path to an extra skills directory added to global scope (tilde-expanded). |
+| `AI_AGENT_PRESS_CACHE_DIR`      | Override the default VitePress cache directory location.                  |
+| `INCLUDE_GLOBAL_NODE_MODULES=1` | Also scan global `node_modules` for agent packages.                       |
+
+### Hierarchy & Navigation
+
+The portal follows a strict hierarchy:
+
+1.  **Scope**: `Global` or `Current Repo`.
+2.  **Agent**: `gemini`, `claude`, etc.
+3.  **Category**: `instructions` or `skills`.
+4.  **Name**: The slugified filename.
+
+**Nested Loading**: Skills support nested folders for better organization. Instructions are always flattened at the root of their category.
 
 ## 🛠 Commands & Flags
 
-- `press`: Start local documentation server in preview mode.
-- `press preview`: Start local documentation server.
+- `press`: Start local documentation server (default port 5173).
+- `press preview -p <port>`: Start local documentation server on a specific port.
 - `press build`: Generate static documentation site.
-- `press list`: List agent files in a hierarchical structure (Headless mode).
-- `press validate`: Validate ecosystem structures and content.
-- `press doctor`: Diagnostics and environment checks.
+- `press list`: List agent files in a hierarchical structure.
 
 ### Global Options
-- `--global`: Include only global configurations from `~/.agents`, `~/.claude`, etc.
-- `--repo`: Include only configurations from the current repository.
-- `-p, --port <port>`: Choose the preview server port.
-- `--json`: Format output as JSON (for `list`).
-- `--openai`, `--claude`, `--gemini`, `--cursor`, `--codex`, `--cline`, `--roo`, `--openclaw`: Filter ecosystems.
-- `--all`: Include all ecosystems and categories (Skills, Rules, Workflows).
+
+- `-p, --port <port>`: Port to run the server on (default: 5173).
+- `--global`: Include only global configurations.
+- `--repo`: Include only repository configurations.
+- `-a, --agent <name>`: Filter by agent.
+- `--json`: Format output as JSON.
 - `-h, --help`: Display help information.
 
 ## 🖥 Architecture & Display
 
 ### Hierarchical Sidebar & URLs
+
 The portal and headless output follow a strict hierarchy:
+
 1.  **Scope**: `Global` or `Current Repo` (omitted if only one exists).
-2.  **Ecosystem**: `gemini`, `claude`, etc. (omitted if only one exists).
-3.  **Category**: `instructions`, `agents`, `skills`, or `resources`.
+2.  **Agent**: `gemini`, `claude`, etc. (omitted if only one exists).
+3.  **Category**: `instructions` or `skills`.
 4.  **Name**: The slugified filename.
 
 **URL Example**: `/global/gemini/skills/github-pr`
 
 ### Smart Flattening
-To keep navigation clean, **ai-agent-press** automatically flattens layers:
-- If only local repo files are found, the top-level "Current Repo" section is hidden.
-- If only one ecosystem is active (e.g., via `--gemini`), the ecosystem layer is omitted.
 
-### Ecosystem Discovery
+To keep navigation clean, **ai-agent-press** automatically flattens layers:
+
+- If only local repo files are found, the top-level "Current Repo" section is hidden.
+- If only one agent is active (e.g., via `-a gemini`), the agent layer is omitted.
+
+### Agent Discovery
+
 - **OpenAI**: `OPENAI.md`, `.openai/`
 - **Agent**: `AGENTS.md`, `.agents/`
 - **Codex**: `CODEX.md`, `.codex/`
-- **Claude**: `CLAUDE.md`, `.claude/`
+- **Claude**: `CLAUDE.md`, `.claude/` (global skills: `~/.claude/skills/**`)
 - **Gemini**: `GEMINI.md`, `.gemini/`
+- **Antigravity**: `.gemini/antigravity/brain/`
 - **Cursor**: `.cursor/rules/`
 - **Cline**: `.cline/`, `.clinerules`
 - **Roo**: `.roo/`, `.roomodes`, `.roorules`
+- **Aider**: `.aider.conf.yml`, `.aider.chat.history.md`
 - **OpenClaw**: `openclaw.json`, `openclaw.json5`, `.openclaw/`
 
 ### Rendering Notes
+
 - `GEMINI.md` is the preferred portal homepage; `AGENTS.md` is the fallback.
 - Content is automatically wrapped in `<div v-pre>` to prevent VitePress from parsing agent instructions as Vue components.
 - Problematic system files (e.g., `models_cache.json`) are automatically excluded from rendering to ensure build stability.
+- **Binary files excluded**: Image files (PNG, JPG, JPEG, GIF, WEBP) are never scanned — only text and markup formats are included.
+- **Hidden directories filtered**: Path segments starting with `.` (e.g., `.system`) are stripped from sidebar labels and URL slugs. The file is still rendered; the hidden folder just doesn't appear as a navigation level.
+- **Empty sections pruned**: Sidebar groups with no children and no direct link are removed automatically.
+- **SVG files** are syntax-highlighted as XML. Other non-markdown files (`.sh`, `.ts`, `.json`) use their native language for the code fence.
+- **Unknown language warnings** from VitePress/Shiki are suppressed — they are logged internally but do not appear in build or dev server output.
 
 ## 📂 Project Philosophy
 
-**ai-agent-press** aims to unify fragmented AI ecosystems into a single, searchable experience without repo pollution. All temporary files are stored in `node_modules/.ai-agent-press`, keeping your project clean.
+**ai-agent-press** aims to unify fragmented AI agent environments into a single, searchable experience without repo pollution. All temporary files are stored in the user's home cache directory, keeping your project clean.
 
 ## 🤝 Contributing
 

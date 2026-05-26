@@ -7,32 +7,35 @@ First off, thanks for taking the time to contribute! 🎉
 This project uses [Bun](https://bun.sh/).
 
 1.  **Clone the repository**:
+
     ```bash
     git clone https://github.com/your-username/ai-agent-press.git
     cd ai-agent-press
     ```
 
 2.  **Install dependencies**:
+
     ```bash
     bun install
     ```
 
 3.  **Start preview mode**:
     This will scan your local files and start a hot-reloading documentation portal:
+
     ```bash
     bun run press
     ```
 
 4.  **Other commands**:
+
     ```bash
     bun run press build    # Build static site
-    bun run stub           # Prepare build stubs for unbuild
     ```
 
 5.  **Run the built binary**:
     After running `bun run build`, you can use the generated entry point:
     ```bash
-    bun ./dist/index.mjs build
+    node ./dist/index.js build
     ```
 
 ## Running with Props
@@ -43,34 +46,35 @@ Pass CLI props after the `press` script name:
 bun run press --help
 bun run press -- --help
 bun run press -- --all
-bun run press -- --gemini --cursor
+bun run press -- -a gemini,cursor
 bun run press -- ../other-repo
 bun run press preview -- --all
 bun run press build -- ./docs-repo --outDir .press/docs-repo
-bun run press list -- --openclaw --json
+bun run press list -- -a openclaw --json
 ```
 
 Common props:
-- `--all`: Include all ecosystems explicitly.
+
+- `--all`: Include all agents explicitly.
 - `--global`: Include global agent configuration directories.
 - `-p, --port <port>`: Choose the preview server port for `press` or `preview`.
 - `--json`: Format output as JSON (for `list` and `validate`).
-- `--openai`, `--claude`, `--gemini`, `--cursor`, `--codex`, `--cline`, `--roo`, `--aider`, `--openclaw`: Filter to matching ecosystems. Flags can be combined.
+- `-a, --agent <name>`: Filter to matching agents. Pass a comma-separated list or repeat the option.
 - `[paths...]`: Scan one or more project roots instead of the current working directory.
 - `--outDir <dir>`: Choose the static build output directory for `build`.
-
 
 Playwright e2e tests can pass preview props through `PRESS_ARGS`:
 
 ```bash
 bun run test:e2e
 PRESS_ARGS=--all bun run test:e2e
-PRESS_ARGS="--gemini --cursor" bun run test:e2e
+PRESS_ARGS="-a gemini,cursor" bun run test:e2e
 ```
 
 ## Testing
 
 Testing is a critical part of this project. Please refer to the [TESTING.md](TESTING.md) file for detailed instructions on:
+
 - How to run tests.
 - How to write new tests.
 - Our testing philosophy and tools.
@@ -90,6 +94,7 @@ Validate your changes by running `bun run test` before submitting a PR.
 ## 🤖 AI Agent Protocols
 
 If you are an AI agent contributing to this repository:
+
 - You **MUST** adhere to the mandates defined in [GEMINI.md](GEMINI.md).
 - You **MUST** read the Pull Request template before proposing or implementing PR-related tasks.
 - Ensure all commits strictly follow the `feat(xxx):` or `fix(xxx):` format.
@@ -97,8 +102,7 @@ If you are an AI agent contributing to this repository:
 ## Architecture Overview
 
 - `src/cli/`: Command-line interface definitions using `cac`.
-- `src/core/`: Core logic for ecosystem detection and content normalization.
-- `src/adapters/`: Handlers for different AI ecosystem file formats.
+- `src/core/`: Core logic for agent detection and content normalization.
 - `src/renderer/`: Logic to transform the content graph into a VitePress site.
 - `src/vitepress/`: Shared VitePress configuration and virtual site structure.
 

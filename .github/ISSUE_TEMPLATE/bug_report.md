@@ -19,6 +19,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots or logs to help explain your problem.
 
 **Environment:**
- - OS: [e.g. macOS, Linux]
- - Bun Version: [e.g. 1.0.0]
- - Version: [e.g. 0.1.0]
+
+- OS: [e.g. macOS, Linux]
+- Bun Version: [e.g. 1.0.0]
+- Version: [e.g. 0.1.0]

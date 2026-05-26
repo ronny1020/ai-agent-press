@@ -1,14 +1,17 @@
 import { test, expect } from '@playwright/test'
 import { execSync } from 'node:child_process'
 import { readFileSync, unlinkSync } from 'node:fs'
-import type { SidebarItem } from '../shared/types'
+import type { SidebarItem } from '../src/shared/types'
 
-test('agent mode shows agents, skills, and rules', async ({ page }) => {
+test('agent mode shows instructions', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('.VPSidebar')).toBeVisible()
 
-  // github-pr (skill) should be visible
-  const skillLink = page.locator('.VPSidebar a:has-text("github-pr")')
+  // Category should be Instructions
+  await expect(page.locator('.VPSidebar')).toContainText('Instructions')
+
+  // github-pr (now classified as instruction since it's a top-level md) should be visible
+  const skillLink = page.locator('.VPSidebar a:has-text("github-pr")').first()
   await expect(skillLink).toBeVisible()
 })
 

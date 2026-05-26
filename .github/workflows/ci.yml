@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   build:
@@ -39,7 +39,7 @@ jobs:
       - name: Run E2E Tests
         run: bun run test:e2e
         env:
-          # Playwright tests might need a running server. 
+          # Playwright tests might need a running server.
           # For a more robust setup, we'd use a webServer in playwright.config.ts
           # but for now we'll ensure the command at least executes.
           NODE_ENV: test

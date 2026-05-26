@@ -7,6 +7,7 @@ dist/
 .press/
 .temp/
 .cache/
+.test-dist/
 
 # Test artifacts
 playwright-report/
@@ -30,6 +31,7 @@ Thumbs.db
 !.env.example
 
 # Logs
+server.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
