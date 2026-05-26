@@ -65,10 +65,12 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
     }
   }
 
-  // Deduplicate against roots to avoid double scanning
+  // Deduplicate against roots to avoid double scanning,
+  // but always keep the internal root so bundled docs are always discoverable
+  // even when running `press` from inside the package directory itself.
   const resolvedRoots = new Set(roots)
   globalBasePaths = [...new Set(globalBasePaths)].filter(
-    (base) => !resolvedRoots.has(base),
+    (base) => (internalRoot && base === internalRoot) || !resolvedRoots.has(base),
   )
 
   const ignorePatterns = [

@@ -1,5 +1,6 @@
 documentation:
   - changed-files:
+    - any-glob-to-any-file:
       - '*.md'
       - '.github/ISSUE_TEMPLATE/*.md'
       - 'README.md'
@@ -7,15 +8,18 @@ documentation:
 
 feature:
   - changed-files:
+    - any-glob-to-any-file:
       - 'src/cli/*'
       - 'src/core/*'
 
 renderer:
   - changed-files:
+    - any-glob-to-any-file:
       - 'src/renderer/*'
 
 test:
   - changed-files:
+    - any-glob-to-any-file:
       - '**/*.test.ts'
       - '**/*.e2e.ts'
       - 'playwright.config.ts'
