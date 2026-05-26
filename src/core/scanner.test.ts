@@ -301,15 +301,17 @@ describe('Scanner', () => {
     expect(toolNode?.type).toBe('skill')
   })
 
-  it('should handle invalid frontmatter gracefully', async () => {
+  it('should fall back to raw content when YAML frontmatter fails to parse', async () => {
     const agentsDirectory = path.join(testDirectory, '.agents')
     await mkdir(agentsDirectory, { recursive: true })
-    const content = `---
+    // `: ` inside a plain YAML scalar is invalid (ambiguous mapping indicator),
+    // so gray-matter will throw and the scanner falls back to using the full raw content.
+    const rawContent = `---
 name: Prefer scoped Conventional Commits
-description: When committing, default to type(scope): subject form instead of bare type: subject
+description: When committing, default to type(scope): subject form
 ---
 # Content`
-    await writeFile(path.join(agentsDirectory, 'invalid-frontmatter.md'), content)
+    await writeFile(path.join(agentsDirectory, 'bad-frontmatter.md'), rawContent)
 
     const nodes = await scan({ cwd: testDirectory, includeGlobal: false })
 
@@ -317,7 +319,8 @@ description: When committing, default to type(scope): subject form instead of ba
     const node = nodes[0]
     if (!node) throw new Error('Node not found')
 
-    expect(node.title).toBe('invalid-frontmatter')
-    expect(node.content).toBe(content)
+    expect(node.title).toBe('bad-frontmatter')
+    // full raw content used when frontmatter cannot be parsed
+    expect(node.content).toBe(rawContent)
   })
 })

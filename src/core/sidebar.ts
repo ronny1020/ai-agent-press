@@ -25,6 +25,17 @@ export interface SidebarResult {
   sidebar: SidebarItem[]
   nodeToLink: Map<ContentNode, string>
   indexNode?: ContentNode
+  repoSidebarItems: SidebarItem[]
+  globalSidebarItems: SidebarItem[]
+}
+
+export function pruneEmptySidebarGroups(items: SidebarItem[]): SidebarItem[] {
+  return items.flatMap((item) => {
+    if (!item.items) return [item]
+    const pruned = pruneEmptySidebarGroups(item.items)
+    if (pruned.length === 0 && !item.link) return []
+    return [{ ...item, items: pruned }]
+  })
 }
 
 /**
@@ -50,16 +61,16 @@ export function computeSidebar(
 
   const { repoNodes, globalNodes } = splitNodesByScope(nodes)
 
-  const repoSidebarItems = buildSidebarItems(
+  const repoSidebarItems = pruneEmptySidebarGroups(buildSidebarItems(
     repoNodes,
     'repo',
     (n) => nodeToLink.get(n)!,
-  )
-  const globalSidebarItems = buildSidebarItems(
+  ))
+  const globalSidebarItems = pruneEmptySidebarGroups(buildSidebarItems(
     globalNodes,
     'global',
     (n) => nodeToLink.get(n)!,
-  )
+  ))
 
   const sidebar = consolidateSidebar(
     repoSidebarItems,
@@ -67,7 +78,7 @@ export function computeSidebar(
     isAllMode,
   )
 
-  return { sidebar, nodeToLink, indexNode }
+  return { sidebar, nodeToLink, indexNode, repoSidebarItems, globalSidebarItems }
 }
 
 export function buildSidebarItems(
@@ -84,17 +95,22 @@ export function buildSidebarItems(
 
     const categories: SidebarItem[] = []
     if (instructions.length > 0) {
-      categories.push(
-        buildHierarchicalCategory(instructions, 'Instructions', getLink),
-      )
+      categories.push({
+        ...buildHierarchicalCategory(instructions, 'Instructions', getLink),
+        collapsed: false,
+      })
     }
     if (skills.length > 0) {
-      categories.push(buildHierarchicalCategory(skills, 'Skills', getLink))
+      categories.push({
+        ...buildHierarchicalCategory(skills, 'Skills', getLink),
+        collapsed: false,
+      })
     }
 
     sidebarItems.push({
       text: agent,
       items: categories.length > 0 ? categories : undefined,
+      collapsed: false,
     })
   }
 
@@ -125,32 +141,36 @@ export function getRelativeParts(node: ContentNode): string[] {
     }
   }
 
+  let parts: string[] = []
+
   if (lastIndex === -1) {
-    // Fallback: if category folder not found (e.g. custom simple agents), 
+    // Fallback: if category folder not found (e.g. custom simple agents),
     // use the folder structure after the agent/scope part.
     const segments = normalizedPath.split('/')
-    
+
     // Look for agent name in path to find root
     const agentSegment = node.agent.toLowerCase()
     const agentIndex = segments.findLastIndex(
       (s) => s.toLowerCase() === agentSegment || s.toLowerCase() === `.${agentSegment}`
     )
-    
+
     if (agentIndex !== -1) {
       const afterAgent = segments.slice(agentIndex + 1)
       if (afterAgent.length > 1) {
-        return afterAgent.slice(0, -1)
+        parts = afterAgent.slice(0, -1)
       }
     }
   } else {
     const afterCategory = normalizedPath.slice(lastIndex + searchString.length)
     const segments = afterCategory.split('/')
     if (segments.length > 1) {
-      return segments.slice(0, -1)
+      parts = segments.slice(0, -1)
     }
   }
 
-  return []
+  // Filter out hidden directory segments (e.g. .system) — these are internal
+  // organisational folders that should not appear as sidebar entries.
+  return parts.filter((p) => !p.startsWith('.'))
 }
 
 function buildHierarchicalCategory(
@@ -168,8 +188,16 @@ function buildHierarchicalCategory(
       const part = relativePart!
       let group = currentItems.find((item) => item.text === part && item.items)
       if (!group) {
-        group = { text: part, items: [], collapsed: true }
-        currentItems.push(group)
+        // If a non-group item with this name already exists, merge it into a group
+        const existingItemIndex = currentItems.findIndex((item) => item.text === part)
+        if (existingItemIndex === -1) {
+          group = { text: part, items: [], collapsed: false }
+          currentItems.push(group)
+        } else {
+          const existing = currentItems[existingItemIndex]!
+          group = { text: part, items: [], collapsed: false, link: existing.link }
+          currentItems.splice(existingItemIndex, 1, group)
+        }
       }
       currentItems = group.items!
     }
@@ -179,12 +207,14 @@ function buildHierarchicalCategory(
     const lastFolder = relativeParts.at(-1)
     const lastFolderUpper = lastFolder?.toUpperCase()
 
+    const nodeTitle = typeof node.title === 'string' ? node.title : stem
+
     // Redundancy elimination: 
     // If the file name is generic (SKILL, README, INDEX, TASK, IMPLEMENTATION_PLAN, WALKTHROUGH) 
     // OR matches the folder name, and we have a folder to attach it to, we elevate the link.
     const isGeneric = [
-      'SKILL', 'README', 'INDEX', 'TASK', 
-      'IMPLEMENTATION_PLAN', 'WALKTHROUGH'
+      'SKILL', 'SKILLS', 'README', 'INDEX', 'TASK', 
+      'IMPLEMENTATION_PLAN', 'WALKTHROUGH', 'RULE', 'RULES', 'GOAL', 'CONFIG'
     ].includes(stemUpper)
     
     const matchesFolder = lastFolderUpper && stemUpper === lastFolderUpper
@@ -200,7 +230,15 @@ function buildHierarchicalCategory(
       }
     }
 
-    currentItems.push({ text: node.title, link: getLink(node) })
+    // Merge logic for leaf nodes: if an item with same text exists (maybe as a group), use it or skip
+    const existing = currentItems.find(item => item.text === nodeTitle)
+    if (existing) {
+      if (existing.link === undefined) {
+        existing.link = getLink(node)
+      }
+    } else {
+      currentItems.push({ text: nodeTitle, link: getLink(node) })
+    }
   }
 
   return {
@@ -241,6 +279,7 @@ export function consolidateSidebar(
     sidebar.push({
       text: 'Global',
       items: globalSidebarItems,
+      collapsed: false,
     })
   }
 
@@ -248,6 +287,7 @@ export function consolidateSidebar(
     sidebar.push({
       text: 'Current Repo',
       items: repoSidebarItems,
+      collapsed: false,
     })
   }
 
@@ -255,10 +295,13 @@ export function consolidateSidebar(
 }
 
 export function pickIndexNode(nodes: ContentNode[]): ContentNode | undefined {
-  const repoNodes = nodes.filter((n) => n.scope === 'repo')
+  if (nodes.length === 0) return undefined
 
-  // Prefer instruction nodes in the root
-  const priorities = ['GEMINI.MD', 'AGENTS.MD']
+  const repoNodes = nodes.filter((n) => n.scope === 'repo')
+  const globalNodes = nodes.filter((n) => n.scope === 'global')
+
+  // Priority 1: Generic names in repo root
+  const priorities = ['GEMINI.MD', 'AGENTS.MD', 'README.MD', 'SKILL.MD', 'INDEX.MD']
 
   for (const priority of priorities) {
     const found = repoNodes.find(
@@ -267,7 +310,34 @@ export function pickIndexNode(nodes: ContentNode[]): ContentNode | undefined {
     if (found) return found
   }
 
-  return repoNodes[0] || nodes[0]
+  // Priority 2: Generic names anywhere in repo
+  for (const priority of priorities) {
+    const found = repoNodes.find(
+      (n) => path.basename(n.path).toUpperCase().includes(priority),
+    )
+    if (found) return found
+  }
+
+  // Priority 3: First repo node
+  if (repoNodes.length > 0) return repoNodes[0]
+
+  // Priority 4: Generic names in global
+  for (const priority of priorities) {
+    const found = globalNodes.find(
+      (n) => path.basename(n.path).toUpperCase() === priority,
+    )
+    if (found) return found
+  }
+
+  // Priority 5: Generic names anywhere in global
+  for (const priority of priorities) {
+    const found = globalNodes.find(
+      (n) => path.basename(n.path).toUpperCase().includes(priority),
+    )
+    if (found) return found
+  }
+
+  return nodes[0]
 }
 
 export function getNodeLink(node: ContentNode, usedPageIds: Set<string>): string {

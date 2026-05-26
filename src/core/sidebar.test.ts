@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { buildSidebarItems, getRelativeParts, getNodeLink , computeSidebar } from './sidebar'
+import { buildSidebarItems, getRelativeParts, getNodeLink, computeSidebar, pruneEmptySidebarGroups } from './sidebar'
 import type { ContentNode } from '../shared/types'
 
 describe('Sidebar Nesting', () => {
@@ -107,6 +107,39 @@ describe('Sidebar Nesting', () => {
     expect(pluginItem?.text).toBe('my-plugin')
     expect(pluginItem?.link).toBe('/1')
     expect(pluginItem?.items).toHaveLength(0)
+  })
+
+  it('should filter out hidden directory segments (starting with dot) from relative parts', () => {
+    const node: ContentNode = {
+      id: 'hidden-test',
+      agent: 'codex',
+      type: 'skill',
+      scope: 'global',
+      title: 'SKILL',
+      path: '/home/user/.codex/skills/.system/openai-docs/SKILL.md',
+      content: '',
+    } as ContentNode
+
+    const relative = getRelativeParts(node)
+    // .system should be filtered out — only openai-docs remains
+    expect(relative).toEqual(['openai-docs'])
+
+    const used = new Set<string>()
+    const link = getNodeLink(node, used)
+    // URL should not contain 'system'
+    expect(link).toBe('global/codex/skills/openai-docs/skill')
+  })
+
+  it('should remove empty sidebar groups that have no link and no children', () => {
+    const emptyGroup = { text: 'Empty', items: [] }
+    const groupWithLink = { text: 'WithLink', link: '/x', items: [] }
+    const nested = { text: 'Outer', items: [emptyGroup] }
+
+    const result = pruneEmptySidebarGroups([emptyGroup, groupWithLink, nested])
+    // emptyGroup removed; groupWithLink kept (has link); nested removed (inner empty, no link)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.text).toBe('WithLink')
+    expect(result[0]?.items).toEqual([])
   })
 
   it('should extract relative parts and generate consistent node links for custom folders', () => {

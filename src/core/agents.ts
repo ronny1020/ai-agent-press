@@ -1,21 +1,21 @@
 import path from 'node:path'
+import JSON5 from 'json5'
 import type { Agent, NodeType } from '../shared/types'
 
 export const ASSET_EXTENSIONS = [
   'md',
-  'json',
-  'jsonc',
-  'json5',
-  'yml',
-  'yaml',
+  'mdc',
   'ts',
   'js',
   'py',
   'sh',
-  'mdc',
   'txt',
+  'svg',
 ]
+// Config extensions are handled more specifically to avoid noise
+export const CONFIG_EXTENSIONS = ['json', 'jsonc', 'json5', 'yml', 'yaml']
 export const ASSET_GLOB = `**/*.{${ASSET_EXTENSIONS.join(',')}}`
+export const CONFIG_GLOB = `**/*.{${CONFIG_EXTENSIONS.join(',')}}`
 
 export type AgentConfig =
   | {
@@ -81,24 +81,40 @@ export const AGENTS: AgentDefinition[] = [
   createAgent({
     id: 'openai',
     label: 'OpenAI',
-    localPatterns: ['OPENAI.md', '.openai/' + ASSET_GLOB],
-    globalPatterns: ['OPENAI.md', '.openai/skills/' + ASSET_GLOB],
+    localPatterns: [
+      'OPENAI.md',
+      '.openai/' + ASSET_GLOB,
+      '.openai/' + CONFIG_GLOB,
+    ],
+    globalPatterns: [
+      'OPENAI.md',
+      `.openai/{skills,instructions,tools}/${ASSET_GLOB}`,
+      `.openai/{skills,instructions,tools}/${CONFIG_GLOB}`,
+    ],
     detect: ({ lowerPath, name }) =>
       /(^|\/)\.openai(\/|$)/.test(lowerPath) || name === 'openai.md',
   }),
   createAgent({
     id: 'agent',
     label: 'Agent',
-    localPatterns: ['AGENTS.md', '.agents/' + ASSET_GLOB],
-    globalPatterns: ['AGENTS.md', '.agents/skills/' + ASSET_GLOB],
+    localPatterns: ['AGENTS.md', '.agents/' + ASSET_GLOB, '.agents/' + CONFIG_GLOB],
+    globalPatterns: [
+      'AGENTS.md',
+      `.agents/{skills,instructions,tools}/${ASSET_GLOB}`,
+      `.agents/{skills,instructions,tools}/${CONFIG_GLOB}`,
+    ],
     detect: ({ lowerPath, name }) =>
       /(^|\/)\.agents(\/|$)/.test(lowerPath) || name === 'agents.md',
   }),
   createAgent({
     id: 'codex',
     label: 'Codex',
-    localPatterns: ['CODEX.md', '.codex/' + ASSET_GLOB],
-    globalPatterns: ['CODEX.md', '.codex/skills/' + ASSET_GLOB],
+    localPatterns: ['CODEX.md', '.codex/' + ASSET_GLOB, '.codex/' + CONFIG_GLOB],
+    globalPatterns: [
+      'CODEX.md',
+      `.codex/{skills,instructions,tools}/${ASSET_GLOB}`,
+      `.codex/{skills,instructions,tools}/${CONFIG_GLOB}`,
+    ],
     detect: ({ lowerPath, name }) =>
       /(^|\/)\.codex(\/|$)/.test(lowerPath) || name === 'codex.md',
   }),
@@ -108,11 +124,13 @@ export const AGENTS: AgentDefinition[] = [
     localPatterns: [
       'CLAUDE.md',
       '.claude/' + ASSET_GLOB,
+      '.claude/' + CONFIG_GLOB,
       'claude_desktop_config.json',
     ],
     globalPatterns: [
       'CLAUDE.md',
-      '.claude/skills/' + ASSET_GLOB,
+      `.claude/{skills,instructions,tools}/${ASSET_GLOB}`,
+      `.claude/{skills,instructions,tools}/${CONFIG_GLOB}`,
       'claude_desktop_config.json',
     ],
     detect: ({ lowerPath, name }) =>
@@ -123,18 +141,22 @@ export const AGENTS: AgentDefinition[] = [
   createAgent({
     id: 'gemini',
     label: 'Gemini',
-    localPatterns: ['GEMINI.md', '.gemini/' + ASSET_GLOB],
+    localPatterns: [
+      'GEMINI.md',
+      '.gemini/' + ASSET_GLOB,
+      '.gemini/' + CONFIG_GLOB,
+    ],
     globalPatterns: [
-      '.gemini/GEMINI.md',
-      '.gemini/skills/' + ASSET_GLOB,
-      '.config/gemini/GEMINI.md',
-      '.config/gemini/skills/' + ASSET_GLOB,
+      'GEMINI.md',
+      `.gemini/{skills,instructions,rules,mcp,tools,brain}/${ASSET_GLOB}`,
+      `.gemini/{skills,instructions,rules,mcp,tools,brain}/${CONFIG_GLOB}`,
+      `.config/gemini/{skills,instructions,rules,mcp,tools,brain}/${ASSET_GLOB}`,
+      `.config/gemini/{skills,instructions,rules,mcp,tools,brain}/${CONFIG_GLOB}`,
     ],
     detect: ({ lowerPath, name }) =>
       /(^|\/)\.gemini(\/|$)/.test(lowerPath) ||
       /(^|\/)\.config\/gemini(\/|$)/.test(lowerPath) ||
-      name === 'gemini.md' ||
-      name === 'memory.md',
+      name === 'gemini.md',
   }),
   createAgent({
     id: 'cursor',
@@ -144,7 +166,8 @@ export const AGENTS: AgentDefinition[] = [
       '.cursorrules',
     ],
     globalPatterns: [
-      '.cursor/rules/**/*.{md,ts,js,py,sh,mdc}',
+      `.cursor/rules/${ASSET_GLOB}`,
+      `.cursor/rules/${CONFIG_GLOB}`,
       '.cursorrules',
     ],
     detect: ({ lowerPath, name }) =>
@@ -158,7 +181,12 @@ export const AGENTS: AgentDefinition[] = [
       '.clinerules',
       '.clinerules/' + ASSET_GLOB,
     ],
-    globalPatterns: ['.cline/skills/' + ASSET_GLOB, '.clinerules'],
+    globalPatterns: [
+      `.cline/{skills,instructions,tools}/${ASSET_GLOB}`,
+      `.cline/{skills,instructions,tools}/${CONFIG_GLOB}`,
+      '.clinerules',
+      `.clinerules/${ASSET_GLOB}`,
+    ],
     detect: ({ lowerPath, name }) =>
       /(^|\/)\.cline(\/|$)/.test(lowerPath) ||
       name === '.clinerules' ||
@@ -175,9 +203,11 @@ export const AGENTS: AgentDefinition[] = [
       '.roo/rules/**/*.{md,txt}',
     ],
     globalPatterns: [
-      '.roo/rules/**/*.{md,txt}',
+      `.roo/{skills,instructions,tools}/${ASSET_GLOB}`,
+      `.roo/{skills,instructions,tools}/${CONFIG_GLOB}`,
       '.roomodes',
       '.roorules',
+      '.roorules-*',
       'custom_modes.yaml',
     ],
     detect: ({ lowerPath, name }) =>
@@ -189,10 +219,9 @@ export const AGENTS: AgentDefinition[] = [
   createAgent({
     id: 'aider',
     label: 'Aider',
-    localPatterns: ['.aider.conf.yml', '.aider.chat.history.md'],
+    localPatterns: ['.aider.conf.yml'],
     globalPatterns: ['.aider.conf.yml'],
-    detect: ({ name }) =>
-      name === '.aider.conf.yml' || name === '.aider.chat.history.md',
+    detect: ({ name }) => name === '.aider.conf.yml',
   }),
   // Simple agents from vercel-labs/skills
   ...createSimpleAgents([
@@ -241,29 +270,28 @@ export const AGENTS: AgentDefinition[] = [
 function createSimpleAgents(
   items: { id: Agent; label: string; dir: string }[],
 ): AgentDefinition[] {
-  return items.map((item) =>
-    createAgent({
+  return items.map((item) => {
+    // Pre-compile RegExp to avoid recreation on every detect call
+    const escapedDirectory = item.dir.replaceAll('.', String.raw`\.`)
+    const directoryRegex = new RegExp(`(^|/)${escapedDirectory}(/|$)`)
+
+    return createAgent({
       id: item.id,
       label: item.label,
-      localPatterns: [`${item.dir}/${ASSET_GLOB}`],
-      // Global simple agents should only look in their specific hidden folder
-      globalPatterns: [`${item.dir}/skills/${ASSET_GLOB}`, `${item.dir}/rules/${ASSET_GLOB}`],
-      detect: ({ lowerPath }) => {
-        const escapedDirectory = item.dir.replaceAll('.', String.raw`\.`)
-        // Match if it's a folder segment or the folder itself
-        const regex = new RegExp(`(^|/)${escapedDirectory}(/|$)`)
-        return regex.test(lowerPath)
-      },
-    }),
-  )
+      localPatterns: [`${item.dir}/${ASSET_GLOB}`, `${item.dir}/${CONFIG_GLOB}`],
+      globalPatterns: [
+        `${item.dir}/{skills,instructions,rules,tools}/${ASSET_GLOB}`,
+        `${item.dir}/{skills,instructions,rules,tools}/${CONFIG_GLOB}`,
+      ],
+      detect: ({ lowerPath }) => directoryRegex.test(lowerPath),
+    })
+  })
 }
 
 export const AGENT_IDS = AGENTS.map((agent) => agent.id)
 
-export function findAgent(path: string): AgentDefinition {
-  return (
-    AGENTS.find((agent) => agent.detect(path)) ?? fallbackAgent
-  )
+export function findAgent(path: string): AgentDefinition | undefined {
+  return AGENTS.find((agent) => agent.detect(path))
 }
 
 export function detectNodeType(
@@ -293,15 +321,6 @@ interface PathParts {
   name: string
 }
 
-const fallbackAgent = createAgent({
-  id: 'gemini',
-  label: 'Gemini',
-  localPatterns: [],
-  globalPatterns: [],
-  detect: () => true,
-})
-
-
 function pathParts(filePath: string): PathParts {
   const normalized = filePath.replaceAll('\\', '/')
   return {
@@ -320,16 +339,19 @@ function defaultNodeType(filePath: string): NodeType | undefined {
     name === 'OPENAI.MD'
   )
     return 'instruction'
-  
+
   const lowerPath = filePath.toLowerCase()
-  
+  const extension = path.extname(filePath).toLowerCase().slice(1)
+
   // Skill detection: must be in a recognized skill-like folder
   if (
-    lowerPath.includes('/skills/') || 
-    lowerPath.includes('/rules/') ||
-    lowerPath.includes('/mcp/') ||
-    lowerPath.includes('/tools/') ||
-    lowerPath.includes('/antigravity/brain/')
+    (lowerPath.includes('/skills/') ||
+      lowerPath.includes('/rules/') ||
+      lowerPath.includes('/mcp/') ||
+      lowerPath.includes('/tools/') ||
+      lowerPath.includes('/antigravity/brain/')) &&
+    (ASSET_EXTENSIONS.includes(extension) ||
+      CONFIG_EXTENSIONS.includes(extension))
   ) {
     return 'skill'
   }
@@ -407,11 +429,23 @@ function parseConfig(
 }
 
 function parseJsonLike(content: string): AgentConfig {
+  // Try standard JSON after stripping comments and trailing commas
+  const stripped = stripJsonComments(content)
   try {
     return {
       kind: 'object',
       format: 'json',
-      value: JSON.parse(stripJsonComments(content)) as Record<string, unknown>,
+      value: JSON.parse(stripped) as Record<string, unknown>,
+    }
+  } catch {
+    // Fall through to JSON5 for relaxed syntax (unquoted keys, single quotes, etc.)
+  }
+
+  try {
+    return {
+      kind: 'object',
+      format: 'json',
+      value: JSON5.parse(content) as Record<string, unknown>,
     }
   } catch (error) {
     return {
@@ -444,7 +478,8 @@ function parseYamlLike(content: string): AgentConfig {
       kind: 'unparsed',
       format: 'yaml',
       value: content,
-      error: 'No simple key-value settings found',
+      error:
+        'YAML content appears complex or non-standard; only flat key: value pairs are supported',
     }
   }
 
@@ -464,12 +499,12 @@ function parseScalar(value: string): unknown {
   return trimmed.replaceAll(/^["']|["']$/g, '')
 }
 
+// Strips block comments, line comments, and trailing commas from JSON-like content.
+// Does NOT attempt to auto-quote keys — JSON5.parse handles relaxed syntax.
 function stripJsonComments(content: string): string {
   return content
     .replaceAll(/\/\*[\s\S]*?\*\//g, '')
     .replaceAll(/^\s*\/\/.*$/gm, '')
-    .replaceAll(/([{,]\s*)([A-Za-z_$][\w$.-]*)(\s*:)/g, '$1"$2"$3')
-    .replaceAll(/'([^']*)'/g, (_, value: string) => JSON.stringify(value))
     .replaceAll(/,\s*([}\]])/g, '$1')
 }
 

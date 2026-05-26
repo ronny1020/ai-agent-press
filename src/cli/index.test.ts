@@ -104,5 +104,18 @@ describe('CLI Options Logic', () => {
         agents: ['gemini'],
       }))
     })
+
+    it('should exclude nodes with empty or whitespace-only content', async () => {
+      scanSpy.mockImplementation(() =>
+        Promise.resolve([
+          { id: '1', agent: 'gemini', type: 'skill', scope: 'repo', title: 'ok', path: 'ok.md', content: '# Hello' },
+          { id: '2', agent: 'gemini', type: 'skill', scope: 'repo', title: 'empty', path: 'empty.md', content: '' },
+          { id: '3', agent: 'gemini', type: 'skill', scope: 'repo', title: 'ws', path: 'ws.md', content: '   \n  ' },
+        ] as never[]),
+      )
+      const result = await scanFromCli([], {})
+      expect(result).toHaveLength(1)
+      expect(result[0]?.id).toBe('1')
+    })
   })
 })

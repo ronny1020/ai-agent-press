@@ -8,8 +8,10 @@ Turn your AI-agent instruction files and skill directories into a unified develo
 
 - **Instruction & Skill Focus**: Strictly organized into Instructions and Skills.
 - **Nested Skills**: Supports hierarchical organization for skills, while keeping instructions flat.
-- **Global-first**: Loads local repo, global home, and external `~/projects/skills` automatically.
+- **Global-first**: Loads local repo, global home (`~/.claude/skills/`, `~/.gemini/`, etc.), and external `~/projects/skills` automatically.
 - **Cross-runtime**: Fully compatible with Node.js 20+ and Bun.
+- **Smart Content Filtering**: Excludes binary image files (PNG/JPG/GIF/WEBP) and hidden organizational directories (dot-prefixed like `.system`) from navigation and URLs.
+- **Clean Navigation**: Empty sidebar sections are automatically pruned; pages that fail to render are skipped gracefully.
 
 ## 🚀 Quick Start
 
@@ -99,7 +101,7 @@ To keep navigation clean, **ai-agent-press** automatically flattens layers:
 - **OpenAI**: `OPENAI.md`, `.openai/`
 - **Agent**: `AGENTS.md`, `.agents/`
 - **Codex**: `CODEX.md`, `.codex/`
-- **Claude**: `CLAUDE.md`, `.claude/`
+- **Claude**: `CLAUDE.md`, `.claude/` (global skills: `~/.claude/skills/**`)
 - **Gemini**: `GEMINI.md`, `.gemini/`
 - **Antigravity**: `.gemini/antigravity/brain/`
 - **Cursor**: `.cursor/rules/`
@@ -113,6 +115,11 @@ To keep navigation clean, **ai-agent-press** automatically flattens layers:
 - `GEMINI.md` is the preferred portal homepage; `AGENTS.md` is the fallback.
 - Content is automatically wrapped in `<div v-pre>` to prevent VitePress from parsing agent instructions as Vue components.
 - Problematic system files (e.g., `models_cache.json`) are automatically excluded from rendering to ensure build stability.
+- **Binary files excluded**: Image files (PNG, JPG, JPEG, GIF, WEBP) are never scanned — only text and markup formats are included.
+- **Hidden directories filtered**: Path segments starting with `.` (e.g., `.system`) are stripped from sidebar labels and URL slugs. The file is still rendered; the hidden folder just doesn't appear as a navigation level.
+- **Empty sections pruned**: Sidebar groups with no children and no direct link are removed automatically.
+- **SVG files** are syntax-highlighted as XML. Other non-markdown files (`.sh`, `.ts`, `.json`) use their native language for the code fence.
+- **Unknown language warnings** from VitePress/Shiki are suppressed — they are logged internally but do not appear in build or dev server output.
 
 ## 📂 Project Philosophy
 

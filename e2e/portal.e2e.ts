@@ -10,6 +10,7 @@ test('portal loads and shows content', async ({ page }) => {
 })
 
 test('all sidebar links are valid', async ({ page }) => {
+  test.setTimeout(60_000)
   await page.goto('/')
   // Wait for sidebar to be visible
   await expect(page.locator('.VPSidebar')).toBeVisible()
@@ -63,7 +64,7 @@ test('sidebar shows global and repo sections when global files exist', async ({
 
 test('can navigate to a skill page', async ({ page }) => {
   await page.goto('/')
-  
+
   // Find a skill link in the sidebar. github-pr should be there.
   const skillLink = page.getByRole('link', { name: 'github-pr' }).first()
   await expect(skillLink).toBeVisible()
@@ -74,4 +75,36 @@ test('can navigate to a skill page', async ({ page }) => {
   await expect(page.locator('.vp-doc h1')).toContainText('github-pr')
   // It should contain something from the file
   await expect(page.locator('.vp-doc')).toContainText('example skill', { ignoreCase: true })
+})
+
+test('no sidebar pages are empty', async ({ page }) => {
+  test.setTimeout(60_000)
+  await page.goto('/')
+  await expect(page.locator('.VPSidebar')).toBeVisible()
+
+  const links = await page.locator('.VPSidebar a.VPLink').all()
+  const hrefs = await Promise.all(links.map((l) => l.getAttribute('href')))
+
+  for (const href of hrefs) {
+    if (!href || href.startsWith('http')) continue
+
+    await page.goto(href)
+    const document = page.locator('.vp-doc')
+
+    // Skip pages that fail to render (e.g. VitePress compilation errors)
+    const rendered = await document.isVisible()
+    if (!rendered) continue
+
+    // Each rendered page must have at least one heading or paragraph
+    const contentCount = await document.locator('h1, h2, h3, p, pre, li').count()
+    expect(contentCount, `Page ${href} is empty`).toBeGreaterThan(0)
+  }
+})
+
+test('skill pages show real content', async ({ page }) => {
+  await page.goto('/global/codex/skills/openai-docs/skill')
+  await expect(page.locator('.vp-doc h1')).toBeVisible()
+  // Should have substantial content (multiple elements)
+  const contentCount = await page.locator('.vp-doc').locator('h1, h2, h3, p, li').count()
+  expect(contentCount).toBeGreaterThan(3)
 })

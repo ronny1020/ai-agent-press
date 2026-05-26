@@ -7,7 +7,6 @@ import matter from 'gray-matter'
 import type { Agent, ContentNode } from '../shared/types'
 import {
   AGENTS,
-  ASSET_GLOB,
   detectNodeType,
   findAgent,
 } from './agents'
@@ -41,9 +40,11 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
   const home = path.resolve(homedir())
   let globalBasePaths = [home]
 
-  // Add external skills project
-  const externalSkills = path.resolve(home, 'projects/skills')
-  globalBasePaths.push(externalSkills)
+  // Allow opt-in extra skills directory via env var (e.g. PRESS_EXTRA_SKILLS_PATH=~/projects/skills)
+  const extraSkillsPath = process.env.PRESS_EXTRA_SKILLS_PATH
+  if (extraSkillsPath) {
+    globalBasePaths.push(path.resolve(extraSkillsPath.replace(/^~/, home)))
+  }
 
   // Add internal package root
   const internalRoot = getInternalAgentsPath()
@@ -74,41 +75,18 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
     '**/node_modules/**',
     '**/README.md',
     '**/.git/**',
-    '**/.svn/**',
-    '**/.hg/**',
     '**/dist/**',
     '**/build/**',
-    '**/out/**',
     '**/target/**',
-    '**/vendor/**',
     '**/.cache/**',
-    '**/bin/**',
-    '**/obj/**',
-    // Browser profiles (Windows/Mac/Linux)
-    '**/Default/Extensions/**',
-    '**/Profiles/*/Extensions/**',
-    '**/Application Data/Google/Chrome/**',
-    '**/Library/Application Support/Google/Chrome/**',
-    '**/.config/google-chrome/**',
-    '**/antigravity-browser-profile/**',
-    // Hidden config/cache folders that aren't agent-related
-    '**/.local/**',
-    '**/.cache/**',
-    '**/.npm/**',
-    '**/.bun/**',
-    '**/.cargo/**',
-    '**/.rustup/**',
-    '**/.vscode/**',
-    '**/.vscode-server/**',
-    '**/.cursor-server/**',
-    '**/.ssh/**',
-    '**/.gnupg/**',
     // Temporary tool outputs and metadata
     '**/*.metadata',
-    '**/metadata/**',
+    '**/*.metadata.json',
+    '**/*.resolved',
+    '**/*.resolved.*',
     '**/tmp/**',
     '**/temp/**',
-    '**/.gemini/tmp/**',
+    '**/.tmp/**',
     '**/tool-outputs/**',
     '**/playwright-report/**',
     '**/test-results/**',
@@ -118,6 +96,9 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
     '**/plugin.lock',
     '**/*.orig',
     '**/*.bak',
+    '**/.system_generated/**',
+    '**/logs/**',
+    '**/log/**',
   ]
 
   const nodes: ContentNode[] = []
@@ -142,7 +123,9 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
 
       const name = path.basename(file, path.extname(file))
       const agentDefinition = findAgent(file)
-      
+
+      if (!agentDefinition) return // Skip files that don't match any known agent
+
       if (process.env.DEBUG_SCANNER) {
         console.log(`DEBUG: processing ${file} for agent ${agentDefinition.id}`)
       }
@@ -181,12 +164,9 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
   }
 
   const scanPath = async (base: string, scope: 'repo' | 'global') => {
-    const patterns = [
-      ...AGENTS.flatMap((agent) =>
-        scope === 'repo' ? agent.localPatterns : agent.globalPatterns,
-      ),
-      `.agents/${ASSET_GLOB}`,
-    ]
+    const patterns = AGENTS.flatMap((agent) =>
+      scope === 'repo' ? agent.localPatterns : agent.globalPatterns,
+    )
 
     const files = await fg(patterns, {
       cwd: base,
@@ -212,5 +192,6 @@ export async function scan(options: ScanOptions): Promise<ContentNode[]> {
 
   await Promise.all(tasks)
 
-  return nodes
+  // Return sorted by path for deterministic ordering across runs
+  return nodes.toSorted((a, b) => a.path.localeCompare(b.path))
 }

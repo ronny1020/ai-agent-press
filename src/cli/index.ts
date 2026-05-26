@@ -1,8 +1,12 @@
 #!/usr/bin/env node
+import path from 'node:path'
+import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { cac } from 'cac'
 import { version } from '../../package.json'
 
 import { scan } from '../core/scanner'
+import { AGENT_IDS } from '../core/agents'
 
 import type { Agent, SidebarItem } from '../shared/types'
 import { computeSidebar, splitNodesByScope } from '../core/sidebar'
@@ -29,7 +33,15 @@ export function selectedAgents(options: CliOptions): Agent[] | undefined {
     ? options.agent
     : options.agent.split(',')
 
-  return agentOptions.map((agent) => agent.trim().toLowerCase()) as Agent[]
+  const parsed = agentOptions.map((a) => a.trim().toLowerCase())
+  const valid = parsed.filter((a): a is Agent => AGENT_IDS.includes(a as Agent))
+  const invalid = parsed.filter((a) => !AGENT_IDS.includes(a as Agent))
+
+  if (invalid.length > 0) {
+    console.warn(`Warning: unknown agent(s) ignored: ${invalid.join(', ')}`)
+  }
+
+  return valid.length > 0 ? valid : undefined
 }
 
 export function resolvePort(options: CliOptions): number {
@@ -47,11 +59,23 @@ export async function scanFromCli(paths: string[] = [], options: CliOptions) {
     includeGlobal = false
   }
 
-  return scan({
+  const nodes = await scan({
     cwd: resolveScanRoots(paths),
     includeGlobal,
     includeRepo,
     agents: selectedAgents(options),
+  })
+
+  // Filter nodes that break build, are irrelevant, or have no parseable content
+  return nodes.filter((n) => {
+    const b = path.basename(n.path).toLowerCase()
+    return (
+      !b.includes('cache') &&
+      !b.includes('auth.json') &&
+      !b.includes('version.json') &&
+      !b.includes('.lock') &&
+      n.content.trim().length > 0
+    )
   })
 }
 
@@ -95,7 +119,7 @@ export function createCli() {
     .action(previewAction)
 
   cli
-    .command('build [paths...]', 'Generate static documentation site')
+    .command('build [...paths]', 'Generate static documentation site')
     .option('--outDirectory <dir>', 'Output directory', {
       default: '.press/dist',
     })
@@ -116,7 +140,7 @@ export function createCli() {
     })
 
   cli
-    .command('list [paths...]', 'List all discovered agent files (Headless mode)')
+    .command('list [...paths]', 'List all discovered agent files (Headless mode)')
     .action(async (paths: string[], options: CliOptions) => {
       const nodes = await scanFromCli(paths, options)
 
@@ -160,10 +184,10 @@ export function createCli() {
     })
 
   cli
-    .command('validate', 'Validate agent structures')
-    .action(async (options: CliOptions) => {
+    .command('validate [...paths]', 'Validate agent structures')
+    .action(async (paths: string[], options: CliOptions) => {
       console.log('Validating...')
-      const nodes = await scanFromCli([], options)
+      const nodes = await scanFromCli(paths, options)
       const errors = nodes.filter((n) => !n.content.trim())
 
       if (errors.length > 0) {
@@ -173,8 +197,34 @@ export function createCli() {
       console.log('Validation successful.')
     })
 
-  cli.command('doctor', 'Diagnostics and environment checks').action(() => {
-    console.log('Running diagnostics...')
+  cli.command('doctor', 'Diagnostics and environment checks').action(async () => {
+    console.log('Running diagnostics...\n')
+
+    console.log(`Node.js  : ${process.version}`)
+    console.log(`Platform : ${process.platform} (${process.arch})`)
+
+    const { getBaseTemporaryDirectory } = await import('../renderer/vitepress')
+    console.log(`Cache dir: ${getBaseTemporaryDirectory()}`)
+
+    if (process.env.AI_AGENT_PRESS_CACHE_DIR) {
+      console.log(`AI_AGENT_PRESS_CACHE_DIR=${process.env.AI_AGENT_PRESS_CACHE_DIR}`)
+    }
+    if (process.env.PRESS_EXTRA_SKILLS_PATH) {
+      console.log(`PRESS_EXTRA_SKILLS_PATH=${process.env.PRESS_EXTRA_SKILLS_PATH}`)
+    }
+
+    const request = createRequire(import.meta.url)
+    try {
+      const vpPackagePath = request.resolve('vitepress/package.json')
+      const { version: vpVersion } = JSON.parse(
+        await readFile(vpPackagePath, 'utf8'),
+      ) as { version: string }
+      console.log(`VitePress: ${vpVersion}`)
+    } catch {
+      console.error('VitePress: NOT FOUND')
+    }
+
+    console.log('\nDiagnostics complete.')
   })
 
   cli.help()

@@ -92,7 +92,7 @@ describe('VitePress renderer', () => {
     expect(config).toContain('"footer"') // footer
     expect(config).toContain('"lastUpdated": true') // lastUpdated
     expect(config).toContain('"cleanUrls": true') // cleanUrls
-    expect(config).toContain('"lineNumbers": true') // markdown line numbers
+    expect(config).toContain('lineNumbers: true') // markdown line numbers
   })
 
   it('should include instructions and skills in current mode (default)', async () => {
